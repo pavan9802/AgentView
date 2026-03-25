@@ -1,0 +1,27 @@
+{
+  "name": "agentview",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "dashboard"
+  ],
+  "scripts": {
+    "dev": "bun run --filter ./server dev & bun run --filter ./dashboard dev",
+    "build": "bun run --filter ./shared build && bun run --filter ./server build && bun run --filter ./dashboard build",
+    "typecheck": "bun run --filter '*' typecheck",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.5.0"
+  }
+}

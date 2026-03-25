@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.cache/
+*.local
+.env
+.env.*
+!.env.example
+
+# Bun
+bun.lockb
+
+# SQLite
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# macOS
+.DS_Store
+
+CLAUDE.md
+PLAN.md
