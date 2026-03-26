@@ -1,11 +1,18 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022"],
-    "types": ["bun-types"],
+    // DOM adds console, Request, Response, URL, fetch, etc.
+    // ES2022 covers everything else from the base config.
+    // bun-types is loaded via /// <reference types="bun-types" /> in src/globals.d.ts
+    // once the package is installed — removing it from here avoids a hard error
+    // when packages haven't been installed yet.
+    "lib": ["ES2022", "DOM"],
     "rootDir": "./src",
     "outDir": "./dist",
-    "noEmit": true
+    "noEmit": true,
+    // Server is a binary, not a library — no declarations needed
+    "declaration": false,
+    "declarationMap": false
   },
   "include": ["src"]
 }

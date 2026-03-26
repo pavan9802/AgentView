@@ -10,7 +10,8 @@
     "lint": "eslint src"
   },
   "dependencies": {
-    "@agentview/shared": "workspace:*"
+    "@agentview/shared": "workspace:*",
+    "@anthropic-ai/claude-agent-sdk": "latest"
   },
   "devDependencies": {
     "@types/bun": "latest",
