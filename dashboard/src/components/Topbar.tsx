@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { BUDGET } from "../lib/constants";
 
 interface TopbarProps {
@@ -7,7 +8,7 @@ interface TopbarProps {
   budgetPct: number;
 }
 
-export default function Topbar({ runningCount, totalCost, sessionCount, budgetPct }: TopbarProps) {
+function Topbar({ runningCount, totalCost, sessionCount, budgetPct }: TopbarProps) {
   return (
     <div className="topbar">
       <div className="logo">AGENTVIEW</div>
@@ -37,3 +38,5 @@ export default function Topbar({ runningCount, totalCost, sessionCount, budgetPc
     </div>
   );
 }
+
+export default memo(Topbar);
