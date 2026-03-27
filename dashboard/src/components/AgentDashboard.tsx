@@ -153,12 +153,12 @@ export default function AgentDashboard() {
     );
   }, []);
 
-  const active = sessions.find((s) => s.id === activeId);
-  if (!active) return null;
+  const selectedSession = sessions.find((s) => s.id === activeId);
+  if (!selectedSession) return null;
 
   const totalCost = sessions.reduce((a, s) => a + s.cost, 0);
   const budgetPct = Math.min((totalCost / BUDGET) * 100, 100);
-  const ctxPct = Math.min((active.tokens / CTX_MAX) * 100, 100);
+  const ctxPct = Math.min((selectedSession.tokens / CTX_MAX) * 100, 100);
   const runningCount = sessions.filter((s) => s.status === "running").length;
 
   return (
@@ -173,13 +173,13 @@ export default function AgentDashboard() {
         />
         <Sidebar sessions={sessions} activeId={activeId} onSelect={setActiveId} />
         <FeedPanel
-          active={active}
+          selectedSession={selectedSession}
           ctxPct={ctxPct}
           feedRef={feedRef}
           onSubmit={handleSubmit}
         />
         <RightPanel
-          active={active}
+          selectedSession={selectedSession}
           activeId={activeId}
           activeTab={activeTab}
           onTabChange={setActiveTab}

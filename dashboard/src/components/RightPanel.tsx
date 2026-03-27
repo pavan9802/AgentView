@@ -6,7 +6,7 @@ import { BUDGET, CTX_MAX } from "../lib/constants";
 import type { Session } from "../lib/types";
 
 interface RightPanelProps {
-  active: Session;
+  selectedSession: Session;
   activeId: string;
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -18,7 +18,7 @@ interface RightPanelProps {
 }
 
 export default function RightPanel({
-  active,
+  selectedSession,
   activeId,
   activeTab,
   onTabChange,
@@ -41,10 +41,10 @@ export default function RightPanel({
 
         {activeTab === "metrics" && (
           <>
-            {active.pendingApproval && (
+            {selectedSession.pendingApproval && (
               <div className="acard">
                 <div className="ahdr">⚠ APPROVAL REQUIRED</div>
-                <div className="acmd">$ {active.pendingApproval}</div>
+                <div className="acmd">$ {selectedSession.pendingApproval}</div>
                 <div className="abtns">
                   <button className="btn approve" onClick={() => onApprove(activeId)}>APPROVE</button>
                   <button className="btn reject" onClick={() => onReject(activeId)}>REJECT</button>
@@ -54,33 +54,33 @@ export default function RightPanel({
             <div className="mrow">
               <div className="mcard">
                 <div className="mlbl">Cost</div>
-                <div className="mval" style={{ color: "var(--green)" }}>${active.cost.toFixed(3)}</div>
+                <div className="mval" style={{ color: "var(--green)" }}>${selectedSession.cost.toFixed(3)}</div>
                 <div className="msub">of ${BUDGET} budget</div>
               </div>
               <div className="mcard">
                 <div className="mlbl">Tokens</div>
-                <div className="mval" style={{ color: "var(--blue)" }}>{(active.tokens / 1000).toFixed(1)}k</div>
+                <div className="mval" style={{ color: "var(--blue)" }}>{(selectedSession.tokens / 1000).toFixed(1)}k</div>
                 <div className="msub">of {CTX_MAX / 1000}k ctx</div>
               </div>
             </div>
             <div className="divider" />
-            <TokenChart data={active.tokenHistory} />
+            <TokenChart data={selectedSession.tokenHistory} />
             <div className="divider" />
-            <ContextPie tokens={active.tokens} />
+            <ContextPie tokens={selectedSession.tokens} />
           </>
         )}
 
         {activeTab === "turns" && (
           <>
-            <TurnLatency turns={active.turnLatency} />
+            <TurnLatency turns={selectedSession.turnLatency} />
             <div className="divider" />
-            <ToolUsage feed={active.feed} />
+            <ToolUsage feed={selectedSession.feed} />
           </>
         )}
 
         {activeTab === "alerts" && (
           <>
-            {active.pendingApproval && (
+            {selectedSession.pendingApproval && (
               <div className="alert alert-warn">
                 <span className="aicon">⚠</span>
                 <div className="abody"><strong>Approval pending</strong> — Bash command waiting for review</div>
@@ -102,15 +102,15 @@ export default function RightPanel({
                 </div>
               </div>
             )}
-            {active.turnLatency.some((t) => t.latency > 3000) && (
+            {selectedSession.turnLatency.some((t) => t.latency > 3000) && (
               <div className="alert alert-info">
                 <span className="aicon">ℹ</span>
                 <div className="abody">
-                  <strong>Slow turns detected</strong> — {active.turnLatency.filter((t) => t.latency > 3000).length} turn(s) exceeded 3s on this session
+                  <strong>Slow turns detected</strong> — {selectedSession.turnLatency.filter((t) => t.latency > 3000).length} turn(s) exceeded 3s on this session
                 </div>
               </div>
             )}
-            {!active.pendingApproval && budgetPct <= 70 && ctxPct <= 60 && !active.turnLatency.some((t) => t.latency > 3000) && (
+            {!selectedSession.pendingApproval && budgetPct <= 70 && ctxPct <= 60 && !selectedSession.turnLatency.some((t) => t.latency > 3000) && (
               <div className="empty">No active alerts</div>
             )}
           </>

@@ -1,60 +1,31 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type React from "react";
 import type { Session } from "../lib/types";
-import { fmtTs, fmtElapsed } from "../lib/utils";
+import { fmtTs } from "../lib/utils";
+import SessionHeader from "./SessionHeader";
 
 interface FeedPanelProps {
-  active: Session;
+  selectedSession: Session;
   ctxPct: number;
   feedRef: React.RefObject<HTMLDivElement>;
   onSubmit: (prompt: string) => void;
 }
 
 export default function FeedPanel({
-  active,
+  selectedSession,
   ctxPct,
   feedRef,
   onSubmit,
 }: FeedPanelProps) {
+
   const [prompt, setPrompt] = useState("");
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    if (active.status !== "running") return;
-    const t = setInterval(() => setTick((n) => n + 1), 1000);
-    return () => clearInterval(t);
-  }, [active.status]);
-
-  const elapsedSec = active.status === "running" ? Math.floor((Date.now() - active.startedAt) / 1000) : 0;
-
+  
   return (
     <div className="main">
-      <div className="thdr">
-        <div className={`sdot ${active.status}`} />
-        <div className="tname">{active.name}</div>
-        <div className="tmeta">
-          <span
-            style={{
-              color:
-                active.status2 === "waiting"
-                  ? "var(--amber)"
-                  : active.status2 === "complete"
-                    ? "var(--blue)"
-                    : "var(--green)",
-            }}
-          >
-            {active.status2}
-          </span>
-          <span style={{ color: "var(--text-muted)" }}>turn</span>
-          <b>{active.turn}</b>
-          <span style={{ color: "var(--text-muted)" }}>elapsed</span>
-          <b>{fmtElapsed(elapsedSec)}</b>
-          <span style={{ color: "var(--text-muted)" }}>ctx</span>
-          <b style={{ color: ctxPct > 75 ? "var(--amber)" : "var(--green)" }}>{ctxPct.toFixed(1)}%</b>
-        </div>
-      </div>
+      <SessionHeader selectedSession={selectedSession} ctxPct={ctxPct} />
 
       <div className="feed" ref={feedRef}>
-        {active.feed.map((item) => {
+        {selectedSession.feed.map((item) => {
           if (item.type === "turn") {
             return <div className="tmark" key={item.id}>TURN {item.turn}</div>;
           }
@@ -67,7 +38,7 @@ export default function FeedPanel({
             </div>
           );
         })}
-        {active.status2 === "thinking" && (
+        {selectedSession.status2 === "thinking" && (
           <div className="fi">
             <span className="fts">{fmtTs(Date.now())}</span>
             <span className="ftool t-thinking">···</span>
