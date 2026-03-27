@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type React from "react";
 import type { Session } from "../lib/types";
 import { fmtTs, fmtElapsed } from "../lib/utils";
@@ -7,9 +8,7 @@ interface FeedPanelProps {
   elapsedSec: number;
   ctxPct: number;
   feedRef: React.RefObject<HTMLDivElement>;
-  prompt: string;
-  onPromptChange: (value: string) => void;
-  onSubmit: () => void;
+  onSubmit: (prompt: string) => void;
 }
 
 export default function FeedPanel({
@@ -17,10 +16,9 @@ export default function FeedPanel({
   elapsedSec,
   ctxPct,
   feedRef,
-  prompt,
-  onPromptChange,
   onSubmit,
 }: FeedPanelProps) {
+  const [prompt, setPrompt] = useState("");
   return (
     <div className="main">
       <div className="thdr">
@@ -77,10 +75,10 @@ export default function FeedPanel({
           className="pinput"
           placeholder="New session or inject mid-task instructions…"
           value={prompt}
-          onChange={(e) => onPromptChange(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onSubmit()}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && prompt.trim()) { onSubmit(prompt); setPrompt(""); } }}
         />
-        <button className="pbtn" onClick={onSubmit} disabled={!prompt.trim()}>
+        <button className="pbtn" onClick={() => { if (prompt.trim()) { onSubmit(prompt); setPrompt(""); } }} disabled={!prompt.trim()}>
           RUN
         </button>
       </div>
