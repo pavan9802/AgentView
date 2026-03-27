@@ -6,7 +6,7 @@ import { styles } from "../styles/dashboardStyles";
 import type { Session } from "../lib/types";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
-import FeedPanel from "./FeedPanel";
+import FeedPanel from "./feed/FeedPanel";
 import RightPanel from "./RightPanel";
 import { useSessions } from "../hooks/useSessions";
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from "react";
-import type { Session } from "../lib/types";
-import { fmtElapsed } from "../lib/utils";
+import type { Session } from "../../lib/types";
+import { fmtElapsed } from "../../lib/utils";
 
 interface SessionHeaderProps {
   selectedSession: Session;
