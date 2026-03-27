@@ -1,3 +1,44 @@
-// Shared types — populated in Stage 1.2
-// This file is intentionally minimal at Stage 1.1
-export type {};
+export type {
+  SessionStatus,
+  KeyStatus,
+  KillReason,
+  ErrorReason,
+  Session,
+  Turn,
+  ToolCall,
+} from "./session";
+
+export type { SyncStatus, Config } from "./config";
+
+export type {
+  WsInitMessage,
+  WsSessionStartedMessage,
+  WsTurnUpdateMessage,
+  WsToolCallMessage,
+  WsApprovalRequiredMessage,
+  WsSessionCompleteMessage,
+  WsSessionErroredMessage,
+  WsSessionKilledMessage,
+  WsKeyStatusMessage,
+  WsSyncStatusMessage,
+  WsServerToClient,
+  WsApprovalResponseMessage,
+  WsKillSessionMessage,
+  WsClientToServer,
+} from "./websocket";
+
+export type {
+  StartSessionRequest,
+  StartSessionResponse,
+  KillSessionResponse,
+  ListSessionsResponse,
+  GetSessionResponse,
+  RequestOtpRequest,
+  RequestOtpResponse,
+  VerifyOtpRequest,
+  VerifyOtpResponse,
+  SetApiKeyRequest,
+  SetApiKeyResponse,
+  GetSyncStatusResponse,
+  ApiError,
+} from "./rest";
