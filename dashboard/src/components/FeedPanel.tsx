@@ -1,8 +1,8 @@
-import { useState } from "react";
 import type React from "react";
 import type { Session } from "../lib/types";
 import { fmtTs } from "../lib/utils";
 import SessionHeader from "./SessionHeader";
+import PromptBar from "./PromptBar";
 
 interface FeedPanelProps {
   selectedSession: Session;
@@ -17,9 +17,6 @@ export default function FeedPanel({
   feedRef,
   onSubmit,
 }: FeedPanelProps) {
-
-  const [prompt, setPrompt] = useState("");
-  
   return (
     <div className="main">
       <SessionHeader selectedSession={selectedSession} ctxPct={ctxPct} />
@@ -47,19 +44,7 @@ export default function FeedPanel({
         )}
       </div>
 
-      <div className="pbar">
-        <span className="ppfx">❯</span>
-        <input
-          className="pinput"
-          placeholder="New session or inject mid-task instructions…"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && prompt.trim()) { onSubmit(prompt); setPrompt(""); } }}
-        />
-        <button className="pbtn" onClick={() => { if (prompt.trim()) { onSubmit(prompt); setPrompt(""); } }} disabled={!prompt.trim()}>
-          RUN
-        </button>
-      </div>
+      <PromptBar onSubmit={onSubmit} />
     </div>
   );
 }
