@@ -6,7 +6,7 @@ interface TurnsTabProps {
   selectedSession: Session;
 }
 
-export default function TurnsTab({ selectedSession }: TurnsTabProps) {
+function TurnsTab({ selectedSession }: TurnsTabProps) {
   return (
     <>
       <TurnLatency turns={selectedSession.turnLatency} />
@@ -15,3 +15,5 @@ export default function TurnsTab({ selectedSession }: TurnsTabProps) {
     </>
   );
 }
+
+export default TurnsTab;

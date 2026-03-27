@@ -1,4 +1,3 @@
-import { memo } from "react";
 import type React from "react";
 import type { Session } from "../../lib/types";
 import { fmtTs } from "../../lib/utils";
@@ -35,4 +34,4 @@ function FeedList({ selectedSession, feedRef }: FeedListProps) {
   );
 };
 
-export default memo(FeedList);
+export default FeedList;

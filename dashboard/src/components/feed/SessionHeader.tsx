@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect } from "react";
 import type { Session } from "../../lib/types";
 import { fmtElapsed } from "../../lib/utils";
 
@@ -46,4 +46,4 @@ function SessionHeader({ selectedSession, ctxPct }: SessionHeaderProps) {
   );
 };
 
-export default memo(SessionHeader);
+export default SessionHeader;

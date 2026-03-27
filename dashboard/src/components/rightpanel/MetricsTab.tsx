@@ -10,7 +10,7 @@ interface MetricsTabProps {
   onReject: (sid: string) => void;
 }
 
-export default function MetricsTab({ selectedSession, activeId, onApprove, onReject }: MetricsTabProps) {
+function MetricsTab({ selectedSession, activeId, onApprove, onReject }: MetricsTabProps) {
   return (
     <>
       {selectedSession.pendingApproval && (
@@ -42,3 +42,5 @@ export default function MetricsTab({ selectedSession, activeId, onApprove, onRej
     </>
   );
 }
+
+export default MetricsTab;

@@ -8,7 +8,7 @@ interface AlertsTabProps {
   ctxPct: number;
 }
 
-export default function AlertsTab({ selectedSession, budgetPct, totalCost, ctxPct }: AlertsTabProps) {
+function AlertsTab({ selectedSession, budgetPct, totalCost, ctxPct }: AlertsTabProps) {
   const hasSlowTurns = selectedSession.turnLatency.some((t) => t.latency > 3000);
   const slowTurnCount = selectedSession.turnLatency.filter((t) => t.latency > 3000).length;
   const noAlerts = !selectedSession.pendingApproval && budgetPct <= 70 && ctxPct <= 60 && !hasSlowTurns;
@@ -49,3 +49,4 @@ export default function AlertsTab({ selectedSession, budgetPct, totalCost, ctxPc
     </>
   );
 }
+export default AlertsTab;

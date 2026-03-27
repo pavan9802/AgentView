@@ -1,5 +1,4 @@
 import type { Session } from "../lib/types";
-import { memo } from "react";
 interface SidebarProps {
   sessions: Session[];
   activeId: string;
@@ -34,4 +33,4 @@ function Sidebar({ sessions, activeId, onSelect }: SidebarProps) {
     </div>
   );
 }
-export default memo(Sidebar);
+export default Sidebar;
