@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type React from "react";
 import type { Session } from "../lib/types";
 import { fmtTs, fmtElapsed } from "../lib/utils";
 
 interface FeedPanelProps {
   active: Session;
-  elapsedSec: number;
   ctxPct: number;
   feedRef: React.RefObject<HTMLDivElement>;
   onSubmit: (prompt: string) => void;
@@ -13,12 +12,20 @@ interface FeedPanelProps {
 
 export default function FeedPanel({
   active,
-  elapsedSec,
   ctxPct,
   feedRef,
   onSubmit,
 }: FeedPanelProps) {
   const [prompt, setPrompt] = useState("");
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (active.status !== "running") return;
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [active.status]);
+
+  const elapsedSec = active.status === "running" ? Math.floor((Date.now() - active.startedAt) / 1000) : 0;
+
   return (
     <div className="main">
       <div className="thdr">

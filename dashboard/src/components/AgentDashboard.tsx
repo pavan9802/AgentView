@@ -15,29 +15,11 @@ export default function AgentDashboard() {
   const [sessions, setSessions] = useState<Session[]>(SEED_SESSIONS);
   const [activeId, setActiveId] = useState("s1");
   const [activeTab, setActiveTab] = useState("metrics");
-  const [elapsed, setElapsed] = useState<Record<string, number>>({ s1: 0, s2: 0, s3: 0 });
   const feedRef = useRef<HTMLDivElement>(null);
   const intervalsRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const activeIdRef = useRef(activeId);
 
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
-
-  // Elapsed timers
-  useEffect(() => {
-    const t = setInterval(() => {
-      setElapsed((prev) => {
-        const next = { ...prev };
-        setSessions((ss) => {
-          ss.forEach((s) => {
-            if (s.status === "running") next[s.id] = (next[s.id] ?? 0) + 1;
-          });
-          return ss;
-        });
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, []);
 
   // Simulate a session
   const startSim = useCallback((id: string) => {
@@ -137,7 +119,6 @@ export default function AgentDashboard() {
     };
     setSessions((prev) => [s, ...prev]);
     setActiveId(id);
-    setElapsed((prev) => ({ ...prev, [id]: 0 }));
     setTimeout(() => startSim(id), 120);
   }, [startSim, startSession]);
 
@@ -178,7 +159,6 @@ export default function AgentDashboard() {
   const totalCost = sessions.reduce((a, s) => a + s.cost, 0);
   const budgetPct = Math.min((totalCost / BUDGET) * 100, 100);
   const ctxPct = Math.min((active.tokens / CTX_MAX) * 100, 100);
-  const elapsedSec = elapsed[activeId] ?? 0;
   const runningCount = sessions.filter((s) => s.status === "running").length;
 
   return (
@@ -194,7 +174,6 @@ export default function AgentDashboard() {
         <Sidebar sessions={sessions} activeId={activeId} onSelect={setActiveId} />
         <FeedPanel
           active={active}
-          elapsedSec={elapsedSec}
           ctxPct={ctxPct}
           feedRef={feedRef}
           onSubmit={handleSubmit}
