@@ -25,6 +25,7 @@ export default function AgentDashboard() {
   const startSim = useCallback((id: string) => {
     if (intervalsRef.current[id]) return;
     intervalsRef.current[id] = setInterval(() => {
+      console.log("[sim] updating session");
       setSessions((prev) => {
         const idx = prev.findIndex((x) => x.id === id);
         if (idx === -1) {
@@ -67,7 +68,7 @@ export default function AgentDashboard() {
             unread: isActive ? 0 : s.unread + 1,
           };
         }
-
+      
         const next = [...prev];
         next[idx] = updated;
         return next;
@@ -77,7 +78,10 @@ export default function AgentDashboard() {
 
   useEffect(() => {
     startSim("s1");
-    return () => Object.values(intervalsRef.current).forEach(clearInterval);
+    return () => {
+      Object.values(intervalsRef.current).forEach(clearInterval);
+      intervalsRef.current = {};
+    };
   }, [startSim]);
 
   // Clear unread on switch
