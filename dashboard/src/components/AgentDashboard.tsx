@@ -8,8 +8,10 @@ import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
 import FeedPanel from "./FeedPanel";
 import RightPanel from "./RightPanel";
+import { useSessions } from "../hooks/useSessions";
 
 export default function AgentDashboard() {
+  const { startSession } = useSessions();
   const [sessions, setSessions] = useState<Session[]>(SEED_SESSIONS);
   const [activeId, setActiveId] = useState("s1");
   const [activeTab, setActiveTab] = useState("metrics");
@@ -110,12 +112,15 @@ export default function AgentDashboard() {
     return () => clearTimeout(t);
   }, [activeId]);
 
-  useEffect(() => {
-    if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
-  }, [sessions.find((s) => s.id === activeId)?.feed?.length]);
+  // useEffect(() => {
+  //   if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+  // }, [sessions.find((s) => s.id === activeId)?.feed?.length]);
 
   const handleSubmit = useCallback(() => {
     if (!prompt.trim()) return;
+    void startSession(prompt.trim()).then((res) => {
+      console.log("[agentview] session created", res);
+    });
     const id = Math.random().toString(36).slice(2);
     const s: Session = {
       id,
@@ -137,7 +142,7 @@ export default function AgentDashboard() {
     setElapsed((prev) => ({ ...prev, [id]: 0 }));
     setPrompt("");
     setTimeout(() => startSim(id), 120);
-  }, [prompt, startSim]);
+  }, [prompt, startSim, startSession]);
 
   const handleApprove = useCallback((sid: string) => {
     setSessions((prev) =>

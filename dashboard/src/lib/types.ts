@@ -14,6 +14,8 @@ export type ToolFeedItem = {
   duration: number;
 };
 
+export type SessionStatus = "running" | "completed" | "error";
+
 export type FeedItem = TurnFeedItem | ToolFeedItem;
 
 export type TokenPoint = { turn: number; tokens: number };
@@ -22,7 +24,7 @@ export type LatencyPoint = { turn: number; latency: number; tokens: number };
 export type Session = {
   id: string;
   name: string;
-  status: string;
+  status: SessionStatus;
   status2: string;
   feed: FeedItem[];
   turn: number;
