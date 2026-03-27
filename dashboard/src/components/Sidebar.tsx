@@ -1,12 +1,12 @@
 import type { Session } from "../lib/types";
-
+import { memo } from "react";
 interface SidebarProps {
   sessions: Session[];
   activeId: string;
   onSelect: (id: string) => void;
 }
 
-export default function Sidebar({ sessions, activeId, onSelect }: SidebarProps) {
+function Sidebar({ sessions, activeId, onSelect }: SidebarProps) {
   return (
     <div className="sidebar">
       <div className="sb-hdr">Sessions — {sessions.length}</div>
@@ -34,3 +34,4 @@ export default function Sidebar({ sessions, activeId, onSelect }: SidebarProps) 
     </div>
   );
 }
+export default memo(Sidebar);
