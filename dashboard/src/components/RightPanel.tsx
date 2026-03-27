@@ -1,15 +1,12 @@
-import TokenChart from "./charts/TokenChart";
-import ContextPie from "./charts/ContextPie";
-import TurnLatency from "./charts/TurnLatency";
-import ToolUsage from "./charts/ToolUsage";
-import { BUDGET, CTX_MAX } from "../lib/constants";
+import { useState } from "react";
 import type { Session } from "../lib/types";
+import MetricsTab from "./rightpanel/MetricsTab";
+import TurnsTab from "./rightpanel/TurnsTab";
+import AlertsTab from "./rightpanel/AlertsTab";
 
 interface RightPanelProps {
   selectedSession: Session;
   activeId: string;
-  activeTab: string;
-  onTabChange: (tab: string) => void;
   onApprove: (sid: string) => void;
   onReject: (sid: string) => void;
   budgetPct: number;
@@ -20,102 +17,32 @@ interface RightPanelProps {
 export default function RightPanel({
   selectedSession,
   activeId,
-  activeTab,
-  onTabChange,
   onApprove,
   onReject,
   budgetPct,
   totalCost,
   ctxPct,
 }: RightPanelProps) {
+  const [activeTab, setActiveTab] = useState("metrics");
   return (
     <div className="rp">
       <div className="ptabs">
         {(["metrics", "turns", "alerts"] as const).map((t) => (
-          <div key={t} className={`ptab${activeTab === t ? " active" : ""}`} onClick={() => onTabChange(t)}>
+          <div key={t} className={`ptab${activeTab === t ? " active" : ""}`} onClick={() => setActiveTab(t)}>
             {t}
           </div>
         ))}
       </div>
       <div className="pbody">
-
         {activeTab === "metrics" && (
-          <>
-            {selectedSession.pendingApproval && (
-              <div className="acard">
-                <div className="ahdr">⚠ APPROVAL REQUIRED</div>
-                <div className="acmd">$ {selectedSession.pendingApproval}</div>
-                <div className="abtns">
-                  <button className="btn approve" onClick={() => onApprove(activeId)}>APPROVE</button>
-                  <button className="btn reject" onClick={() => onReject(activeId)}>REJECT</button>
-                </div>
-              </div>
-            )}
-            <div className="mrow">
-              <div className="mcard">
-                <div className="mlbl">Cost</div>
-                <div className="mval" style={{ color: "var(--green)" }}>${selectedSession.cost.toFixed(3)}</div>
-                <div className="msub">of ${BUDGET} budget</div>
-              </div>
-              <div className="mcard">
-                <div className="mlbl">Tokens</div>
-                <div className="mval" style={{ color: "var(--blue)" }}>{(selectedSession.tokens / 1000).toFixed(1)}k</div>
-                <div className="msub">of {CTX_MAX / 1000}k ctx</div>
-              </div>
-            </div>
-            <div className="divider" />
-            <TokenChart data={selectedSession.tokenHistory} />
-            <div className="divider" />
-            <ContextPie tokens={selectedSession.tokens} />
-          </>
+          <MetricsTab selectedSession={selectedSession} activeId={activeId} onApprove={onApprove} onReject={onReject} />
         )}
-
         {activeTab === "turns" && (
-          <>
-            <TurnLatency turns={selectedSession.turnLatency} />
-            <div className="divider" />
-            <ToolUsage feed={selectedSession.feed} />
-          </>
+          <TurnsTab selectedSession={selectedSession} />
         )}
-
         {activeTab === "alerts" && (
-          <>
-            {selectedSession.pendingApproval && (
-              <div className="alert alert-warn">
-                <span className="aicon">⚠</span>
-                <div className="abody"><strong>Approval pending</strong> — Bash command waiting for review</div>
-              </div>
-            )}
-            {budgetPct > 70 && (
-              <div className="alert alert-warn">
-                <span className="aicon">⚠</span>
-                <div className="abody">
-                  <strong>Budget at {budgetPct.toFixed(0)}%</strong> — ${totalCost.toFixed(3)} of ${BUDGET} used across all sessions
-                </div>
-              </div>
-            )}
-            {ctxPct > 60 && (
-              <div className="alert alert-warn">
-                <span className="aicon">⚠</span>
-                <div className="abody">
-                  <strong>Context {ctxPct.toFixed(0)}% full</strong> — compaction may occur soon on this session
-                </div>
-              </div>
-            )}
-            {selectedSession.turnLatency.some((t) => t.latency > 3000) && (
-              <div className="alert alert-info">
-                <span className="aicon">ℹ</span>
-                <div className="abody">
-                  <strong>Slow turns detected</strong> — {selectedSession.turnLatency.filter((t) => t.latency > 3000).length} turn(s) exceeded 3s on this session
-                </div>
-              </div>
-            )}
-            {!selectedSession.pendingApproval && budgetPct <= 70 && ctxPct <= 60 && !selectedSession.turnLatency.some((t) => t.latency > 3000) && (
-              <div className="empty">No active alerts</div>
-            )}
-          </>
+          <AlertsTab selectedSession={selectedSession} budgetPct={budgetPct} totalCost={totalCost} ctxPct={ctxPct} />
         )}
-
       </div>
     </div>
   );

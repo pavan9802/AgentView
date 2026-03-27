@@ -6,7 +6,7 @@ import { styles } from "../styles/dashboardStyles";
 import type { Session } from "../lib/types";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
-import FeedPanel from "./feed/FeedPanel";
+import FeedPanel from "./FeedPanel";
 import RightPanel from "./RightPanel";
 import { useSessions } from "../hooks/useSessions";
 
@@ -14,7 +14,6 @@ export default function AgentDashboard() {
   const { startSession } = useSessions();
   const [sessions, setSessions] = useState<Session[]>(SEED_SESSIONS);
   const [activeId, setActiveId] = useState("s1");
-  const [activeTab, setActiveTab] = useState("metrics");
   const feedRef = useRef<HTMLDivElement>(null);
   const intervalsRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const activeIdRef = useRef(activeId);
@@ -185,8 +184,6 @@ export default function AgentDashboard() {
         <RightPanel
           selectedSession={selectedSession}
           activeId={activeId}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
           onApprove={handleApprove}
           onReject={handleReject}
           budgetPct={budgetPct}

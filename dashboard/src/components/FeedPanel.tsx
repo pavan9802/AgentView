@@ -1,8 +1,8 @@
 import type React from "react";
-import type { Session } from "../../lib/types";
-import SessionHeader from "./SessionHeader";
-import FeedList from "./FeedList";
-import PromptBar from "./PromptBar";
+import type { Session } from "../lib/types";
+import SessionHeader from "./feed/SessionHeader";
+import FeedList from "./feed/FeedList";
+import PromptBar from "./feed/PromptBar";
 
 interface FeedPanelProps {
   selectedSession: Session;
