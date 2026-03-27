@@ -15,7 +15,6 @@ export default function AgentDashboard() {
   const [sessions, setSessions] = useState<Session[]>(SEED_SESSIONS);
   const [activeId, setActiveId] = useState("s1");
   const [activeTab, setActiveTab] = useState("metrics");
-  const [prompt, setPrompt] = useState("");
   const [elapsed, setElapsed] = useState<Record<string, number>>({ s1: 0, s2: 0, s3: 0 });
   const feedRef = useRef<HTMLDivElement>(null);
   const intervalsRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
@@ -116,15 +115,14 @@ export default function AgentDashboard() {
   //   if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
   // }, [sessions.find((s) => s.id === activeId)?.feed?.length]);
 
-  const handleSubmit = useCallback(() => {
-    if (!prompt.trim()) return;
+  const handleSubmit = useCallback((prompt: string) => {
     void startSession(prompt.trim()).then((res) => {
       console.log("[agentview] session created", res);
     });
     const id = Math.random().toString(36).slice(2);
     const s: Session = {
       id,
-      name: prompt.trim(),
+      name: prompt,
       status: "running",
       status2: "thinking",
       feed: [makeTurnMarker(1)],
@@ -140,9 +138,8 @@ export default function AgentDashboard() {
     setSessions((prev) => [s, ...prev]);
     setActiveId(id);
     setElapsed((prev) => ({ ...prev, [id]: 0 }));
-    setPrompt("");
     setTimeout(() => startSim(id), 120);
-  }, [prompt, startSim, startSession]);
+  }, [startSim, startSession]);
 
   const handleApprove = useCallback((sid: string) => {
     setSessions((prev) =>
@@ -200,8 +197,6 @@ export default function AgentDashboard() {
           elapsedSec={elapsedSec}
           ctxPct={ctxPct}
           feedRef={feedRef}
-          prompt={prompt}
-          onPromptChange={setPrompt}
           onSubmit={handleSubmit}
         />
         <RightPanel
