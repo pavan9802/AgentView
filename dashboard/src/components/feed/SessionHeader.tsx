@@ -7,7 +7,7 @@ interface SessionHeaderProps {
   ctxPct: number;
 }
 
-const SessionHeader = memo(function SessionHeader({ selectedSession, ctxPct }: SessionHeaderProps) {
+function SessionHeader({ selectedSession, ctxPct }: SessionHeaderProps) {
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -44,6 +44,6 @@ const SessionHeader = memo(function SessionHeader({ selectedSession, ctxPct }: S
       </div>
     </div>
   );
-});
+};
 
-export default SessionHeader;
+export default memo(SessionHeader);

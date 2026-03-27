@@ -8,7 +8,7 @@ interface FeedListProps {
   feedRef: React.RefObject<HTMLDivElement>;
 }
 
-const FeedList = memo(function FeedList({ selectedSession, feedRef }: FeedListProps) {
+function FeedList({ selectedSession, feedRef }: FeedListProps) {
   return (
     <div className="feed" ref={feedRef}>
       {selectedSession.feed.map((item) => {
@@ -33,6 +33,6 @@ const FeedList = memo(function FeedList({ selectedSession, feedRef }: FeedListPr
       )}
     </div>
   );
-});
+};
 
-export default FeedList;
+export default memo(FeedList);

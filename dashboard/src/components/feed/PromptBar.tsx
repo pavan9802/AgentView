@@ -4,7 +4,7 @@ interface PromptBarProps {
   onSubmit: (prompt: string) => void;
 }
 
-const PromptBar = memo(function PromptBar({ onSubmit }: PromptBarProps) {
+function PromptBar({ onSubmit }: PromptBarProps) {
   const [prompt, setPrompt] = useState("");
 
   const handleSubmit = () => {
@@ -28,6 +28,6 @@ const PromptBar = memo(function PromptBar({ onSubmit }: PromptBarProps) {
       </button>
     </div>
   );
-});
+};
 
-export default PromptBar;
+export default memo(PromptBar);
