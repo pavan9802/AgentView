@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { Session } from "../lib/types";
 import MetricsTab from "./rightpanel/MetricsTab";
 import TurnsTab from "./rightpanel/TurnsTab";
@@ -14,7 +14,7 @@ interface RightPanelProps {
   ctxPct: number;
 }
 
-export default function RightPanel({
+const RightPanel = memo(function RightPanel({
   selectedSession,
   activeId,
   onApprove,
@@ -46,4 +46,6 @@ export default function RightPanel({
       </div>
     </div>
   );
-}
+});
+
+export default RightPanel;

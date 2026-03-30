@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { BUDGET } from "../lib/constants";
 
 interface TopbarProps {
@@ -38,4 +39,4 @@ function Topbar({ runningCount, totalCost, sessionCount, budgetPct }: TopbarProp
   );
 }
 
-export default Topbar;
+export default memo(Topbar);

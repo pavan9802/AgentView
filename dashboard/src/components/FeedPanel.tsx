@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type React from "react";
 import type { Session } from "../lib/types";
 import SessionHeader from "./feed/SessionHeader";
@@ -11,7 +12,7 @@ interface FeedPanelProps {
   onSubmit: (prompt: string) => void;
 }
 
-export default function FeedPanel({
+const FeedPanel = memo(function FeedPanel({
   selectedSession,
   ctxPct,
   feedRef,
@@ -24,4 +25,6 @@ export default function FeedPanel({
       <PromptBar onSubmit={onSubmit} />
     </div>
   );
-}
+});
+
+export default FeedPanel;
