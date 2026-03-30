@@ -12,7 +12,7 @@ interface FeedPanelProps {
   onSubmit: (prompt: string) => void;
 }
 
-const FeedPanel = memo(function FeedPanel({
+export default function FeedPanel({
   selectedSession,
   ctxPct,
   feedRef,
@@ -25,6 +25,6 @@ const FeedPanel = memo(function FeedPanel({
       <PromptBar onSubmit={onSubmit} />
     </div>
   );
-});
+}
 
-export default FeedPanel;
+export default memo(FeedPanel);

@@ -14,7 +14,7 @@ interface RightPanelProps {
   ctxPct: number;
 }
 
-const RightPanel = memo(function RightPanel({
+export default function RightPanel({
   selectedSession,
   activeId,
   onApprove,
@@ -46,6 +46,6 @@ const RightPanel = memo(function RightPanel({
       </div>
     </div>
   );
-});
+}
 
-export default RightPanel;
+export default memo(RightPanel);
