@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { Session } from "../lib/types";
 import MetricsTab from "./rightpanel/MetricsTab";
 import TurnsTab from "./rightpanel/TurnsTab";
@@ -47,3 +47,5 @@ export default function RightPanel({
     </div>
   );
 }
+
+export default memo(RightPanel);

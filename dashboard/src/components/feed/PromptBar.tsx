@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 
 interface PromptBarProps {
   onSubmit: (prompt: string) => void;
@@ -30,4 +30,4 @@ function PromptBar({ onSubmit }: PromptBarProps) {
   );
 };
 
-export default PromptBar;
+export default memo(PromptBar);

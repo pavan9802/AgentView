@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type React from "react";
 import type { Session } from "../lib/types";
 import SessionHeader from "./feed/SessionHeader";
@@ -25,3 +26,5 @@ export default function FeedPanel({
     </div>
   );
 }
+
+export default memo(FeedPanel);
