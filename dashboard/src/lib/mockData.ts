@@ -28,7 +28,7 @@ export const SEED_SESSIONS: Session[] = [
   {
     id: "s1",
     name: "Fix auth module",
-    status: "running",
+    status: "running" as const,
     status2: "executing",
     feed: [
       { id: "a0", type: "turn", turn: 1, ts: Date.now() - 180000 },
@@ -61,7 +61,7 @@ export const SEED_SESSIONS: Session[] = [
   {
     id: "s2",
     name: "Refactor API routes",
-    status: "complete",
+    status: "complete" as const,
     status2: "complete",
     feed: [
       { id: "b0", type: "turn", turn: 1, ts: Date.now() - 5400000 },
@@ -85,7 +85,7 @@ export const SEED_SESSIONS: Session[] = [
   {
     id: "s3",
     name: "Write unit tests",
-    status: "complete",
+    status: "complete" as const,
     status2: "complete",
     feed: [
       { id: "c0", type: "turn", turn: 1, ts: Date.now() - 9000000 },

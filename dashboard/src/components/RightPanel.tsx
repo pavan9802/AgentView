@@ -14,7 +14,7 @@ interface RightPanelProps {
   ctxPct: number;
 }
 
-export default function RightPanel({
+const RightPanel = memo(({
   selectedSession,
   activeId,
   onApprove,
@@ -22,7 +22,7 @@ export default function RightPanel({
   budgetPct,
   totalCost,
   ctxPct,
-}: RightPanelProps) {
+}: RightPanelProps) => {
   const [activeTab, setActiveTab] = useState("metrics");
   return (
     <div className="rp">
@@ -46,6 +46,6 @@ export default function RightPanel({
       </div>
     </div>
   );
-}
+});
 
-export default memo(RightPanel);
+export default RightPanel;

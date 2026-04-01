@@ -12,7 +12,7 @@ interface FeedPanelProps {
   onSubmit: (prompt: string) => void;
 }
 
-export default function FeedPanel({
+function FeedPanel({
   selectedSession,
   ctxPct,
   feedRef,

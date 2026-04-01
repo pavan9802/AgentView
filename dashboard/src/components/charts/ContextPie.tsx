@@ -1,7 +1,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { PIE_COLORS, CTX_LABELS } from "../../lib/constants";
 
-export default function ContextPie({ tokens }) {
+export default function ContextPie({ tokens }: { tokens: number }) {
   const sys = 8;
   const hist = Math.min(50 + Math.floor(tokens / 5000), 72);
   const tools = 18;
@@ -13,7 +13,7 @@ export default function ContextPie({ tokens }) {
       <ResponsiveContainer width="100%" height={120}>
         <PieChart>
           <Pie data={data} cx="50%" cy="50%" innerRadius={34} outerRadius={52} dataKey="value" paddingAngle={2} startAngle={90} endAngle={-270}>
-            {data.map((_,i)=><Cell key={i} fill={PIE_COLORS[i]}/>)}
+            {data.map((_,i)=><Cell key={i} fill={PIE_COLORS[i] ?? ""}/>)}
           </Pie>
         </PieChart>
       </ResponsiveContainer>
