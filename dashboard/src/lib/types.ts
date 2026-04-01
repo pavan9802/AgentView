@@ -1,3 +1,7 @@
+import type { SessionStatus } from "@agentview/shared";
+
+export type { SessionStatus };
+
 export type TurnFeedItem = {
   id: string;
   type: "turn";
@@ -13,8 +17,6 @@ export type ToolFeedItem = {
   ts: number;
   duration: number;
 };
-
-export type SessionStatus = "running" | "completed" | "error";
 
 export type FeedItem = TurnFeedItem | ToolFeedItem;
 

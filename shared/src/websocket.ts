@@ -6,6 +6,8 @@ import type { SyncStatus } from "./config";
 export type WsInitMessage = {
   type: "init";
   sessions: Session[];
+  turns: Turn[];
+  tool_calls: ToolCall[];
   key_status: KeyStatus;
   sync_status: SyncStatus;
 };
@@ -27,6 +29,13 @@ export type WsToolCallMessage = {
   type: "tool_call";
   session_id: string;
   tool_call: ToolCall;
+};
+
+export type WsToolResultMessage = {
+  type: "tool_result";
+  session_id: string;
+  tool_call_id: string;
+  output: string; // plain text or JSON-serialised tool output
 };
 
 export type WsApprovalRequiredMessage = {
@@ -73,6 +82,7 @@ export type WsServerToClient =
   | WsSessionStartedMessage
   | WsTurnUpdateMessage
   | WsToolCallMessage
+  | WsToolResultMessage
   | WsApprovalRequiredMessage
   | WsSessionCompleteMessage
   | WsSessionErroredMessage

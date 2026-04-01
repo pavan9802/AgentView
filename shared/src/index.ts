@@ -15,6 +15,7 @@ export type {
   WsSessionStartedMessage,
   WsTurnUpdateMessage,
   WsToolCallMessage,
+  WsToolResultMessage,
   WsApprovalRequiredMessage,
   WsSessionCompleteMessage,
   WsSessionErroredMessage,
