@@ -17,8 +17,12 @@ export type SessionState = {
 /** All active and completed sessions (in-memory, no persistence yet). */
 export const sessions = new Map<string, SessionState>();
 
-/** All connected WebSocket clients. */
-export const clients = new Set<WebSocket>();
+/** The single connected dashboard WebSocket (null when no dashboard is open). */
+export let client: BunServerWebSocket | null = null;
+
+export function setClient(ws: BunServerWebSocket | null): void {
+  client = ws;
+}
 
 /** Pending approval callbacks keyed by tool_use_id. */
 export const pendingApprovals = new Map<string, (approved: boolean) => void>();

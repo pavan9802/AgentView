@@ -1,7 +1,7 @@
 import { handlePostSession, handlePostTurn } from "./routes/session";
 import { handleWsOpen, handleWsMessage, handleWsClose } from "./ws/handler";
-import { sessions, clients } from "./state";
-import type { WsSessionKilledMessage } from "@agentview/shared";
+import { sessions } from "./state";
+import { send } from "./ws/send";
 
 if (!process.env["ANTHROPIC_API_KEY"]) {
   console.error("Error: ANTHROPIC_API_KEY is not set. Add it to .env and restart.");
@@ -52,15 +52,7 @@ function shutdown() {
   for (const session of sessions.values()) {
     if (session.status === "running") {
       session.status = "killed";
-      const msg: WsSessionKilledMessage = {
-        type: "session_killed",
-        session_id: session.id,
-        reason: "server_shutdown",
-      };
-      const payload = JSON.stringify(msg);
-      for (const ws of clients) {
-        ws.send(payload);
-      }
+      send({ type: "session_killed", session_id: session.id, reason: "server_shutdown" });
     }
   }
   process.exit(0);
