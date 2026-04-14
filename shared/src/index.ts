@@ -25,6 +25,7 @@ export type {
   WsServerToClient,
   WsApprovalResponseMessage,
   WsKillSessionMessage,
+  WsSetApprovalConfigMessage,
   WsClientToServer,
 } from "./websocket";
 

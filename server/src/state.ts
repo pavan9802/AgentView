@@ -17,6 +17,7 @@ export type SessionState = {
   error_type: ErrorReason | null;
   error_message: string | null;
   kill_reason: KillReason | null;
+  approvalRequiredTools: Set<string>;
 };
 
 /** All active and completed sessions (in-memory, no persistence yet). */

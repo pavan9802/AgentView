@@ -50,6 +50,13 @@ export function handleWsMessage(_ws: BunServerWebSocket, data: string | Uint8Arr
       resolve(msg.approved);
       break;
     }
+
+    case "set_approval_config": {
+      const session = sessions.get(msg.session_id);
+      if (!session) break;
+      session.approvalRequiredTools = new Set(msg.approval_required_tools);
+      break;
+    }
   }
 }
 

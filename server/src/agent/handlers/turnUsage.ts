@@ -10,6 +10,7 @@ export type LoopState = {
   turnStartedAt: number;
   turnNumber: number;
   currentTurnId: string;
+  toolTimestamps: Map<string, number>;
 };
 
 export function handleTurnUsage(

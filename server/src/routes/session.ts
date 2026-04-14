@@ -33,6 +33,7 @@ export async function handlePostSession(req: Request): Promise<Response> {
     error_type: null,
     error_message: null,
     kill_reason: null,
+    approvalRequiredTools: new Set(body.approval_required_tools ?? ["Bash", "Write"]),
   });
 
   send({ type: "session_started", session: sessionToPublic(sessions.get(id)!) });

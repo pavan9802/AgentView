@@ -2,7 +2,7 @@ import type { Session, Turn, ToolCall, KeyStatus } from "./session";
 import type { SyncStatus } from "./config";
 
 // ── POST /session ─────────────────────────────────────────────────────────────
-export type StartSessionRequest = { prompt: string };
+export type StartSessionRequest = { prompt: string; approval_required_tools?: string[] };
 export type StartSessionResponse = { id: string; status: "created" };
 
 // ── POST /session/:id/turn ────────────────────────────────────────────────────

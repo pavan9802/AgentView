@@ -104,4 +104,10 @@ export type WsKillSessionMessage = {
   session_id: string;
 };
 
-export type WsClientToServer = WsApprovalResponseMessage | WsKillSessionMessage;
+export type WsSetApprovalConfigMessage = {
+  type: "set_approval_config";
+  session_id: string;
+  approval_required_tools: string[];
+};
+
+export type WsClientToServer = WsApprovalResponseMessage | WsKillSessionMessage | WsSetApprovalConfigMessage;

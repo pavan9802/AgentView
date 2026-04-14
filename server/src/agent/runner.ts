@@ -2,6 +2,8 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { sessions } from "../state";
 import { handleSystemInit } from "./handlers/systemInit";
 import { handleTurnUsage, type LoopState } from "./handlers/turnUsage";
+import { makePreToolUseHook } from "./hooks/preToolUse";
+import { makeCanUseTool } from "./hooks/canUseTool";
 
 export async function runAgentSession(sessionId: string, prompt?: string): Promise<void> {
   const session = sessions.get(sessionId);
@@ -20,6 +22,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
     turnStartedAt: Date.now(),
     turnNumber: session.total_turns,
     currentTurnId: "",
+    toolTimestamps: new Map(),
   };
 
   try {
@@ -27,10 +30,14 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
       prompt: turnPrompt,
       options: {
         cwd: session.cwd,
-        allowedTools: ["Read", "Glob", "Grep", "Write", "Edit"],
+        allowedTools: ["Read", "Glob", "Grep", "Edit"],
         permissionMode: "acceptEdits",
         model: "claude-haiku-4-5",
         abortController: session.abortController,
+        hooks: {
+          PreToolUse: [makePreToolUseHook(loopState)],
+        },
+        canUseTool: makeCanUseTool(session, sessionId),
         ...(isResume ? { resume: session.sdk_session_id! } : {}),
       },
     })) {
