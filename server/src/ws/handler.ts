@@ -1,4 +1,5 @@
-import { client, sessions, sessionToPublic, setClient } from "../state";
+import type { WsClientToServer } from "@agentview/shared";
+import { client, pendingApprovals, sessions, sessionToPublic, setClient } from "../state";
 import { send } from "./send";
 
 export function handleWsOpen(ws: BunServerWebSocket): void {
@@ -20,8 +21,36 @@ export function handleWsOpen(ws: BunServerWebSocket): void {
   });
 }
 
-export function handleWsMessage(_ws: BunServerWebSocket, _data: string | Uint8Array): void {
-  // TODO: implement (3.4)
+export function handleWsMessage(_ws: BunServerWebSocket, data: string | Uint8Array): void {
+  let msg: WsClientToServer;
+  try {
+    msg = JSON.parse(typeof data === "string" ? data : new TextDecoder().decode(data)) as WsClientToServer;
+  } catch {
+    return; // malformed JSON — drop silently
+  }
+
+  if (!msg || typeof msg.type !== "string") return;
+
+  switch (msg.type) {
+    case "kill_session": {
+      const session = sessions.get(msg.session_id);
+      if (!session) return;
+      if (session.status !== "running" && session.status !== "created") return;
+      session.abortController.abort();
+      session.status = "killed";
+      session.kill_reason = "user_requested";
+      send({ type: "session_killed", session_id: msg.session_id, reason: "user_requested" });
+      break;
+    }
+
+    case "approval_response": {
+      const resolve = pendingApprovals.get(msg.tool_call_id);
+      if (!resolve) return;
+      pendingApprovals.delete(msg.tool_call_id);
+      resolve(msg.approved);
+      break;
+    }
+  }
 }
 
 export function handleWsClose(ws: BunServerWebSocket): void {

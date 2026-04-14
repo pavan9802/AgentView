@@ -3,6 +3,7 @@ import type { ErrorReason, KillReason, Session, SessionStatus } from "@agentview
 export type SessionState = {
   id: string;                    // our internal UUID (used as the primary key everywhere)
   sdk_session_id: string | null; // SDK-assigned session ID — needed to resume via query({ options: { resume } })
+  abortController: AbortController;
   prompt: string;
   cwd: string;
   status: SessionStatus;

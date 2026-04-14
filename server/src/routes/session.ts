@@ -18,6 +18,7 @@ export async function handlePostSession(req: Request): Promise<Response> {
   sessions.set(id, {
     id,
     sdk_session_id: null, // populated when the SDK emits its system:init message
+    abortController: new AbortController(),
     prompt: body.prompt.trim(),
     cwd,
     status: "created",
