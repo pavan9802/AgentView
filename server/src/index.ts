@@ -1,4 +1,4 @@
-import { handlePostSession } from "./routes/session";
+import { handlePostSession, handlePostTurn } from "./routes/session";
 
 if (!process.env["ANTHROPIC_API_KEY"]) {
   console.error("Error: ANTHROPIC_API_KEY is not set. Add it to .env and restart.");
@@ -15,6 +15,11 @@ const server = Bun.serve({
 
     if (req.method === "POST" && url.pathname === "/session") {
       return handlePostSession(req);
+    }
+
+    const turnMatch = url.pathname.match(/^\/session\/([^/]+)\/turn$/);
+    if (req.method === "POST" && turnMatch?.[1]) {
+      return handlePostTurn(req, turnMatch[1]);
     }
 
     return new Response(JSON.stringify({ error: "Not Found" }), {

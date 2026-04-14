@@ -31,6 +31,8 @@ export type {
 export type {
   StartSessionRequest,
   StartSessionResponse,
+  AddTurnRequest,
+  AddTurnResponse,
   KillSessionResponse,
   ListSessionsResponse,
   GetSessionResponse,

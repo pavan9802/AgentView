@@ -5,6 +5,10 @@ import type { SyncStatus } from "./config";
 export type StartSessionRequest = { prompt: string };
 export type StartSessionResponse = { id: string; status: "created" };
 
+// ── POST /session/:id/turn ────────────────────────────────────────────────────
+export type AddTurnRequest = { prompt: string };
+export type AddTurnResponse = { ok: true };
+
 // ── DELETE /session/:id ───────────────────────────────────────────────────────
 export type KillSessionResponse = { ok: true };
 

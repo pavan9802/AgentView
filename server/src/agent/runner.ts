@@ -5,23 +5,28 @@ import { sessions } from "../state";
 const COST_PER_INPUT_TOKEN = 1e-6;   // $1 / 1M
 const COST_PER_OUTPUT_TOKEN = 5e-6;  // $5 / 1M
 
-export async function runAgentSession(sessionId: string): Promise<void> {
+export async function runAgentSession(sessionId: string, prompt?: string): Promise<void> {
   const session = sessions.get(sessionId);
   if (!session) return;
 
-  session.status = "running";
-  session.started_at = Date.now();
+  const isResume = prompt !== undefined;
+  const turnPrompt = isResume ? prompt : session.prompt;
 
-  console.log(`\n[session:${sessionId}] started — prompt: "${session.prompt}"`);
+  session.status = "running";
+  session.completed_at = null;
+  if (!isResume) session.started_at = Date.now();
+
+  console.log(`\n[session:${sessionId}] ${isResume ? "resumed" : "started"} — prompt: "${turnPrompt}"`);
 
   try {
     for await (const message of query({
-      prompt: session.prompt,
+      prompt: turnPrompt,
       options: {
         cwd: session.cwd,
         allowedTools: ["Read", "Glob", "Grep", "Write", "Edit"],
         permissionMode: "acceptEdits",
         model: "claude-haiku-4-5",
+        ...(isResume ? { resume: session.sdk_session_id! } : {}),
       },
     })) {
       // Capture the SDK's own session ID from the system:init message.
@@ -30,7 +35,7 @@ export async function runAgentSession(sessionId: string): Promise<void> {
           "subtype" in message && message.subtype === "init" &&
           "session_id" in message && typeof message.session_id === "string") {
         session.sdk_session_id = message.session_id;
-        console.log(`[session:${sessionId}] sdk_session_id: ${message.session_id}`);
+        console.log(`[session:${sessionId}] ${isResume ? "confirmed" : "captured"} sdk_session_id: ${message.session_id}`);
       }
 
       // Log every message for observability during development
