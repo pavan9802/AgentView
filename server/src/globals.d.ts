@@ -9,11 +9,23 @@ declare const process: {
   env: Record<string, string | undefined>;
   exit(code?: number): never;
   cwd(): string;
+  on(event: string, listener: (...args: unknown[]) => void): void;
 };
+
+interface BunServerWebSocket {
+  send(data: string | ArrayBuffer | Uint8Array): void;
+  close(code?: number, reason?: string): void;
+  readonly readyState: number;
+}
 
 declare const Bun: {
   serve(options: {
     port: number | string;
-    fetch(req: Request): Response | Promise<Response>;
-  }): { port: number };
+    fetch(req: Request): Response | Promise<Response> | undefined;
+    websocket?: {
+      open?(ws: BunServerWebSocket): void;
+      message?(ws: BunServerWebSocket, data: string | Uint8Array): void;
+      close?(ws: BunServerWebSocket, code?: number, reason?: string): void;
+    };
+  }): { port: number; upgrade(req: Request): boolean };
 };
