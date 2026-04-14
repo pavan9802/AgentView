@@ -18,6 +18,10 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
 
   console.log(`\n[session:${sessionId}] ${isResume ? "resumed" : "started"} — prompt: "${turnPrompt}"`);
 
+  let turnStartedAt = Date.now();
+  let turnNumber = 0;
+  const toolTimestamps = new Map<string, number>();
+
   try {
     for await (const message of query({
       prompt: turnPrompt,
@@ -47,9 +51,11 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
         const usage = message.usage as { input_tokens?: number; output_tokens?: number };
         const inputTok = usage.input_tokens ?? 0;
         const outputTok = usage.output_tokens ?? 0;
+        turnNumber += 1;
         session.total_tokens += inputTok + outputTok;
         session.total_cost_usd += inputTok * COST_PER_INPUT_TOKEN + outputTok * COST_PER_OUTPUT_TOKEN;
-        session.total_turns += 1;
+        session.total_turns = turnNumber;
+        turnStartedAt = Date.now(); // reset for next turn's latency measurement
       }
     }
 
