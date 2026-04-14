@@ -1,6 +1,7 @@
 import type { StartSessionRequest, StartSessionResponse, AddTurnRequest, AddTurnResponse } from "@agentview/shared";
-import { sessions } from "../state";
+import { sessions, sessionToPublic } from "../state";
 import { runAgentSession } from "../agent/runner";
+import { send } from "../ws/send";
 
 export async function handlePostSession(req: Request): Promise<Response> {
   const body = (await req.json()) as StartSessionRequest;
@@ -33,6 +34,8 @@ export async function handlePostSession(req: Request): Promise<Response> {
     error_message: null,
     kill_reason: null,
   });
+
+  send({ type: "session_started", session: sessionToPublic(sessions.get(id)!) });
 
   // Fire and forget — agent runs in background
   void runAgentSession(id);
