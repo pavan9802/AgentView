@@ -1,10 +1,11 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { sessions } from "../state";
+import { pendingApprovals, sessions } from "../state";
 import { handleSystemInit } from "./handlers/systemInit";
 import { handleTurnUsage, type LoopState } from "./handlers/turnUsage";
 import { makePreToolUseHook } from "./hooks/preToolUse";
 import { makePostToolUseHook } from "./hooks/postToolUse";
 import { makeCanUseTool } from "./hooks/canUseTool";
+import { send } from "../ws/send";
 
 export async function runAgentSession(sessionId: string, prompt?: string): Promise<void> {
   const session = sessions.get(sessionId);
@@ -26,6 +27,8 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
     toolTimestamps: new Map(),
   };
 
+  let resultText = "";
+
   try {
     for await (const message of query({
       prompt: turnPrompt,
@@ -46,20 +49,60 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
       handleSystemInit(message, session, sessionId, isResume);
       handleTurnUsage(message, session, sessionId, loopState);
 
+      // Track the last assistant text content for result_text
+      if (
+        typeof message === "object" && message !== null &&
+        "role" in message && (message as { role: unknown }).role === "assistant" &&
+        "content" in message && Array.isArray((message as { content: unknown }).content)
+      ) {
+        const content = (message as unknown as { content: unknown[] }).content;
+        const texts = content
+          .filter((b): b is { type: string; text: string } =>
+            typeof b === "object" && b !== null && "type" in b && (b as { type: unknown }).type === "text"
+          )
+          .map((b) => b.text);
+        if (texts.length > 0) resultText = texts.join("\n");
+      }
+
       // Log every message for observability during development
       console.log(`[session:${sessionId}]`, JSON.stringify(message));
     }
 
+   
     session.status = "complete";
     session.completed_at = Date.now();
+    session.result_text = resultText;
+    send({
+      type: "session_complete",
+      session_id: sessionId,
+      total_cost_usd: session.total_cost_usd,
+      total_turns: session.total_turns,
+      result_text: resultText,
+    });
     console.log(`[session:${sessionId}] complete — cost: $${session.total_cost_usd.toFixed(4)}, turns: ${session.total_turns}`);
   } catch (err) {
+  
     session.completed_at = Date.now();
+
     if (err instanceof Error && err.name === "AbortError") {
-      // Session was killed externally (kill_session message or shutdown) — don't overwrite status.
+      // Drain any pending approval that may have been left mid-await.
+      for (const [id, resolve] of pendingApprovals) {
+        resolve(false);
+        pendingApprovals.delete(id);
+      }
+      // Broadcast session_killed only if the kill handler hasn't already done so.
+      if (!session.kill_reason) {
+        session.status = "killed";
+        session.kill_reason = "user_requested";
+        send({ type: "session_killed", session_id: sessionId, reason: "user_requested" });
+      }
       console.log(`[session:${sessionId}] aborted — status: ${session.status}`);
     } else {
+      const message = err instanceof Error ? err.message : String(err);
       session.status = "errored";
+      session.error_type = "api_unavailable";
+      session.error_message = message;
+      send({ type: "session_errored", session_id: sessionId, error_type: "api_unavailable", error_message: message });
       console.error(`[session:${sessionId}] error`, err);
     }
   }
