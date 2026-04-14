@@ -1,6 +1,6 @@
 import { handlePostSession, handlePostTurn } from "./routes/session";
 import { handleWsOpen, handleWsMessage, handleWsClose } from "./ws/handler";
-import { sessions } from "./state";
+import { pendingApprovals, sessions } from "./state";
 import { send } from "./ws/send";
 
 if (!process.env["ANTHROPIC_API_KEY"]) {
@@ -56,6 +56,11 @@ function shutdown() {
       session.kill_reason = "server_shutdown";
       send({ type: "session_killed", session_id: session.id, reason: "server_shutdown" });
     }
+  }
+  // Unblock any canUseTool awaits so their loops can exit cleanly.
+  for (const [id, resolve] of pendingApprovals) {
+    resolve(false);
+    pendingApprovals.delete(id);
   }
   process.exit(0);
 }

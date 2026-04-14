@@ -3,6 +3,7 @@ import { sessions } from "../state";
 import { handleSystemInit } from "./handlers/systemInit";
 import { handleTurnUsage, type LoopState } from "./handlers/turnUsage";
 import { makePreToolUseHook } from "./hooks/preToolUse";
+import { makePostToolUseHook } from "./hooks/postToolUse";
 import { makeCanUseTool } from "./hooks/canUseTool";
 
 export async function runAgentSession(sessionId: string, prompt?: string): Promise<void> {
@@ -36,6 +37,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
         abortController: session.abortController,
         hooks: {
           PreToolUse: [makePreToolUseHook(loopState)],
+          PostToolUse: [makePostToolUseHook(session, sessionId, loopState)],
         },
         canUseTool: makeCanUseTool(session, sessionId),
         ...(isResume ? { resume: session.sdk_session_id! } : {}),

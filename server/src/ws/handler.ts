@@ -39,6 +39,12 @@ export function handleWsMessage(_ws: BunServerWebSocket, data: string | Uint8Arr
       session.abortController.abort();
       session.status = "killed";
       session.kill_reason = "user_requested";
+      // Drain any pending approval so the canUseTool await unblocks and the
+      // SDK loop can observe the abort signal.
+      for (const [id, resolve] of pendingApprovals) {
+        resolve(false);
+        pendingApprovals.delete(id);
+      }
       send({ type: "session_killed", session_id: msg.session_id, reason: "user_requested" });
       break;
     }
