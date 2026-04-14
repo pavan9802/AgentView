@@ -19,7 +19,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
   console.log(`\n[session:${sessionId}] ${isResume ? "resumed" : "started"} — prompt: "${turnPrompt}"`);
 
   let turnStartedAt = Date.now();
-  let turnNumber = 0;
+  let turnNumber = session.total_turns; // preserve count across resumes
   const toolTimestamps = new Map<string, number>();
 
   try {
