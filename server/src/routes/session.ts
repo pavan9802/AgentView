@@ -27,6 +27,10 @@ export async function handlePostSession(req: Request): Promise<Response> {
     total_cost_usd: 0,
     total_tokens: 0,
     total_turns: 0,
+    result_text: null,
+    error_type: null,
+    error_message: null,
+    kill_reason: null,
   });
 
   // Fire and forget — agent runs in background

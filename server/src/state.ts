@@ -1,4 +1,4 @@
-import type { SessionStatus } from "@agentview/shared";
+import type { ErrorReason, KillReason, Session, SessionStatus } from "@agentview/shared";
 
 export type SessionState = {
   id: string;                    // our internal UUID (used as the primary key everywhere)
@@ -12,6 +12,10 @@ export type SessionState = {
   total_cost_usd: number;
   total_tokens: number;
   total_turns: number;
+  result_text: string | null;
+  error_type: ErrorReason | null;
+  error_message: string | null;
+  kill_reason: KillReason | null;
 };
 
 /** All active and completed sessions (in-memory, no persistence yet). */
@@ -26,3 +30,23 @@ export function setClient(ws: BunServerWebSocket | null): void {
 
 /** Pending approval callbacks keyed by tool_use_id. */
 export const pendingApprovals = new Map<string, (approved: boolean) => void>();
+
+/** Strip internal fields before sending a session over the wire. */
+export function sessionToPublic(s: SessionState): Session {
+  return {
+    id: s.id,
+    prompt: s.prompt,
+    cwd: s.cwd,
+    status: s.status,
+    created_at: s.created_at,
+    started_at: s.started_at,
+    completed_at: s.completed_at,
+    total_cost_usd: s.total_cost_usd,
+    total_tokens: s.total_tokens,
+    total_turns: s.total_turns,
+    result_text: s.result_text,
+    error_type: s.error_type,
+    error_message: s.error_message,
+    kill_reason: s.kill_reason,
+  };
+}
