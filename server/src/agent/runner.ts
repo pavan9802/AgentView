@@ -1,5 +1,7 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import type { Turn } from "@agentview/shared";
 import { sessions } from "../state";
+import { send } from "../ws/send";
 
 // Haiku 4.5 pricing (per token)
 const COST_PER_INPUT_TOKEN = 1e-6;   // $1 / 1M
@@ -20,6 +22,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
 
   let turnStartedAt = Date.now();
   let turnNumber = session.total_turns; // preserve count across resumes
+  let currentTurnId = "";
   const toolTimestamps = new Map<string, number>();
 
   try {
@@ -51,11 +54,37 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
         const usage = message.usage as { input_tokens?: number; output_tokens?: number };
         const inputTok = usage.input_tokens ?? 0;
         const outputTok = usage.output_tokens ?? 0;
+        const latency_ms = Date.now() - turnStartedAt;
+        const cost_usd = inputTok * COST_PER_INPUT_TOKEN + outputTok * COST_PER_OUTPUT_TOKEN;
+        const context_fill_pct = Math.min((inputTok / 200_000) * 100, 100);
         turnNumber += 1;
+
+        const turn: Turn = {
+          id: crypto.randomUUID(),
+          session_id: sessionId,
+          turn_number: turnNumber,
+          input_tokens: inputTok,
+          output_tokens: outputTok,
+          cost_usd,
+          context_fill_pct,
+          latency_ms,
+          created_at: Date.now(),
+        };
+        currentTurnId = turn.id;
+
         session.total_tokens += inputTok + outputTok;
-        session.total_cost_usd += inputTok * COST_PER_INPUT_TOKEN + outputTok * COST_PER_OUTPUT_TOKEN;
+        session.total_cost_usd += cost_usd;
         session.total_turns = turnNumber;
-        turnStartedAt = Date.now(); // reset for next turn's latency measurement
+
+        send({
+          type: "turn_update",
+          session_id: sessionId,
+          turn,
+          cumulative_cost_usd: session.total_cost_usd,
+          cumulative_tokens: session.total_tokens,
+        });
+
+        turnStartedAt = Date.now();
       }
     }
 
