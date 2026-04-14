@@ -51,7 +51,9 @@ console.log(`AgentView server — http://localhost:${server.port}`);
 function shutdown() {
   for (const session of sessions.values()) {
     if (session.status === "running") {
+      session.abortController.abort();
       session.status = "killed";
+      session.kill_reason = "server_shutdown";
       send({ type: "session_killed", session_id: session.id, reason: "server_shutdown" });
     }
   }

@@ -26,6 +26,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
         allowedTools: ["Read", "Glob", "Grep", "Write", "Edit"],
         permissionMode: "acceptEdits",
         model: "claude-haiku-4-5",
+        abortController: session.abortController,
         ...(isResume ? { resume: session.sdk_session_id! } : {}),
       },
     })) {
@@ -56,8 +57,13 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
     session.completed_at = Date.now();
     console.log(`[session:${sessionId}] complete — cost: $${session.total_cost_usd.toFixed(4)}, turns: ${session.total_turns}`);
   } catch (err) {
-    session.status = "errored";
     session.completed_at = Date.now();
-    console.error(`[session:${sessionId}] error`, err);
+    if (err instanceof Error && err.name === "AbortError") {
+      // Session was killed externally (kill_session message or shutdown) — don't overwrite status.
+      console.log(`[session:${sessionId}] aborted — status: ${session.status}`);
+    } else {
+      session.status = "errored";
+      console.error(`[session:${sessionId}] error`, err);
+    }
   }
 }
