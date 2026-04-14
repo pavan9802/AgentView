@@ -58,5 +58,23 @@ export function handleTurnUsage(
     cumulative_tokens: session.total_tokens,
   });
 
+  const budgetUsd = parseFloat(process.env["BUDGET_USD"] ?? "0.5");
+  if (session.total_cost_usd > budgetUsd) {
+    session.status = "killed";
+    session.kill_reason = "budget_exceeded";
+    session.abortController.abort();
+    send({ type: "session_killed", session_id: sessionId, reason: "budget_exceeded" });
+    return;
+  }
+
+  const maxTurns = parseInt(process.env["MAX_TURNS"] ?? "50", 10);
+  if (loopState.turnNumber > maxTurns) {
+    session.status = "killed";
+    session.kill_reason = "max_turns_exceeded";
+    session.abortController.abort();
+    send({ type: "session_killed", session_id: sessionId, reason: "max_turns_exceeded" });
+    return;
+  }
+
   loopState.turnStartedAt = Date.now();
 }
