@@ -1,6 +1,15 @@
 import type { Session, Turn, ToolCall, KeyStatus, ErrorReason, KillReason } from "./session";
 import type { SyncStatus } from "./config";
 
+// ── Shared structures ─────────────────────────────────────────────────────────
+
+export type PendingApproval = {
+  tool_call_id: string;
+  session_id: string;
+  tool_name: string;
+  tool_input: string; // JSON-serialised object
+};
+
 // ── Server → Client ──────────────────────────────────────────────────────────
 
 export type WsInitMessage = {
@@ -8,6 +17,7 @@ export type WsInitMessage = {
   sessions: Session[];
   turns: Turn[];
   tool_calls: ToolCall[];
+  pending_approvals: PendingApproval[];
   key_status: KeyStatus;
   sync_status: SyncStatus;
 };
@@ -38,13 +48,7 @@ export type WsToolResultMessage = {
   output: string; // plain text or JSON-serialised tool output
 };
 
-export type WsApprovalRequiredMessage = {
-  type: "approval_required";
-  session_id: string;
-  tool_call_id: string;
-  tool_name: string;
-  tool_input: string; // JSON-serialised object
-};
+export type WsApprovalRequiredMessage = { type: "approval_required" } & PendingApproval;
 
 export type WsSessionCompleteMessage = {
   type: "session_complete";

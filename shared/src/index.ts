@@ -11,6 +11,7 @@ export type {
 export type { SyncStatus, Config } from "./config";
 
 export type {
+  PendingApproval,
   WsInitMessage,
   WsSessionStartedMessage,
   WsTurnUpdateMessage,

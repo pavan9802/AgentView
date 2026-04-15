@@ -39,7 +39,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
       prompt: turnPrompt,
       options: {
         cwd: session.cwd,
-        allowedTools: ["Read", "Glob", "Grep", "Edit"],
+        allowedTools: ["Read", "Glob", "Grep", "Edit", "Bash", "Write"],
         permissionMode: "acceptEdits",
         model: "claude-haiku-4-5",
         abortController: session.abortController,

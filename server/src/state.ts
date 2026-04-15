@@ -18,6 +18,7 @@ export type SessionState = {
   error_message: string | null;
   kill_reason: KillReason | null;
   approvalRequiredTools: Set<string>;
+  approvedToolUseIds: Set<string>;
 };
 
 /** All active and completed sessions (in-memory, no persistence yet). */
@@ -32,6 +33,9 @@ export function setClient(ws: BunServerWebSocket | null): void {
 
 /** Pending approval callbacks keyed by tool_use_id. */
 export const pendingApprovals = new Map<string, (approved: boolean) => void>();
+
+/** Pending approval details keyed by tool_use_id — used to replay on reconnect. */
+export const pendingApprovalDetails = new Map<string, { session_id: string; tool_name: string; tool_input: string }>();
 
 /** Strip internal fields before sending a session over the wire. */
 export function sessionToPublic(s: SessionState): Session {
@@ -50,5 +54,6 @@ export function sessionToPublic(s: SessionState): Session {
     error_type: s.error_type,
     error_message: s.error_message,
     kill_reason: s.kill_reason,
+    approval_required_tools: [...s.approvalRequiredTools],
   };
 }

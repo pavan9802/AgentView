@@ -18,6 +18,7 @@ export type Session = {
   error_message: string | null;
   kill_reason: KillReason | null;
   result_text: string | null;
+  approval_required_tools: string[];
 };
 
 export type Turn = {

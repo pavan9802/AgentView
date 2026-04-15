@@ -17,7 +17,11 @@ export function makePostToolUseHook(
         const duration_ms = Date.now() - (loopState.toolTimestamps.get(msg.tool_use_id) ?? Date.now());
         loopState.toolTimestamps.delete(msg.tool_use_id);
 
-        const approved = session.approvalRequiredTools.has(msg.tool_name) ? true : null;
+        const wasApprovalRequired = session.approvalRequiredTools.has(msg.tool_name);
+        const approved = wasApprovalRequired
+          ? (session.approvedToolUseIds.has(msg.tool_use_id) ? true : false)
+          : null;
+        if (wasApprovalRequired) session.approvedToolUseIds.delete(msg.tool_use_id);
 
         const toolCall: ToolCall = {
           id: crypto.randomUUID(),

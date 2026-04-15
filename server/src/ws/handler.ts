@@ -1,5 +1,5 @@
 import type { WsClientToServer } from "@agentview/shared";
-import { client, pendingApprovals, sessions, sessionToPublic, setClient } from "../state";
+import { client, pendingApprovals, pendingApprovalDetails, sessions, sessionToPublic, setClient } from "../state";
 import { send } from "./send";
 
 export function handleWsOpen(ws: BunServerWebSocket): void {
@@ -16,6 +16,12 @@ export function handleWsOpen(ws: BunServerWebSocket): void {
       .map(sessionToPublic),
     turns: [],
     tool_calls: [],
+    pending_approvals: [...pendingApprovalDetails.entries()].map(([tool_call_id, details]) => ({
+      tool_call_id,
+      session_id: details.session_id,
+      tool_name: details.tool_name,
+      tool_input: details.tool_input,
+    })),
     key_status: "unknown",
     sync_status: { pending_rows: 0, last_sync_at: null, is_reachable: false },
   });

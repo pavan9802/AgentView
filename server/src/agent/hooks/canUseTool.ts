@@ -1,5 +1,5 @@
 import type { CanUseTool } from "@anthropic-ai/claude-agent-sdk";
-import { pendingApprovals, type SessionState } from "../../state";
+import { pendingApprovals, pendingApprovalDetails, type SessionState } from "../../state";
 import { send } from "../../ws/send";
 
 export function makeCanUseTool(session: SessionState, sessionId: string): CanUseTool {
@@ -16,12 +16,18 @@ export function makeCanUseTool(session: SessionState, sessionId: string): CanUse
       tool_input: JSON.stringify(input),
     });
 
+    pendingApprovalDetails.set(toolUseID, { session_id: sessionId, tool_name: toolName, tool_input: JSON.stringify(input) });
+
     const approved = await new Promise<boolean>((resolve) => {
       pendingApprovals.set(toolUseID, resolve);
     });
 
-    return approved
-      ? { behavior: "allow" }
-      : { behavior: "deny", message: "User rejected" };
+    pendingApprovalDetails.delete(toolUseID);
+
+    if (approved) {
+      session.approvedToolUseIds.add(toolUseID);
+      return { behavior: "allow" };
+    }
+    return { behavior: "deny", message: "User rejected" };
   };
 }
