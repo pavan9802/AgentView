@@ -1,6 +1,6 @@
-import type { SessionStatus } from "@agentview/shared";
-
-export type { SessionStatus };
+export type { Session, Turn, ToolCall, SessionStatus, KeyStatus } from "@agentview/shared";
+export type { SyncStatus } from "@agentview/shared";
+export type { PendingApproval } from "@agentview/shared";
 
 export type TurnFeedItem = {
   id: string;
@@ -22,19 +22,3 @@ export type FeedItem = TurnFeedItem | ToolFeedItem;
 
 export type TokenPoint = { turn: number; tokens: number };
 export type LatencyPoint = { turn: number; latency: number; tokens: number };
-
-export type Session = {
-  id: string;
-  name: string;
-  status: SessionStatus;
-  status2: string;
-  feed: FeedItem[];
-  turn: number;
-  cost: number;
-  tokens: number;
-  tokenHistory: TokenPoint[];
-  turnLatency: LatencyPoint[];
-  startedAt: number;
-  unread: number;
-  pendingApproval: string | null;
-};
