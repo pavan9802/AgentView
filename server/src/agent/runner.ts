@@ -1,4 +1,5 @@
-import { query } from "@anthropic-ai/claude-agent-sdk";
+import { query as realQuery } from "@anthropic-ai/claude-agent-sdk";
+import { mockQuery } from "./mockQuery";
 import { pendingApprovals, sessions } from "../state";
 import { handleSystemInit } from "./handlers/systemInit";
 import { handleTurnUsage, type LoopState } from "./handlers/turnUsage";
@@ -6,6 +7,10 @@ import { makePreToolUseHook } from "./hooks/preToolUse";
 import { makePostToolUseHook } from "./hooks/postToolUse";
 import { makeCanUseTool } from "./hooks/canUseTool";
 import { send } from "../ws/send";
+
+// Use the mock when ANTHROPIC_API_KEY=mock to test the WebSocket pipeline locally.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const query = process.env["ANTHROPIC_API_KEY"] === "mock" ? (mockQuery as any as typeof realQuery) : realQuery;
 
 export async function runAgentSession(sessionId: string, prompt?: string): Promise<void> {
   const session = sessions.get(sessionId);
