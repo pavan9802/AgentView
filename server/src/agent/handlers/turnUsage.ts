@@ -34,7 +34,7 @@ export function handleTurnUsage(
   loopState.turnNumber += 1;
 
   const turn: Turn = {
-    id: crypto.randomUUID(),
+    id: loopState.currentTurnId,
     session_id: sessionId,
     turn_number: loopState.turnNumber,
     input_tokens: inputTok,
@@ -44,7 +44,7 @@ export function handleTurnUsage(
     latency_ms,
     created_at: Date.now(),
   };
-  loopState.currentTurnId = turn.id;
+  loopState.currentTurnId = crypto.randomUUID();
 
   session.total_tokens += inputTok + outputTok;
   session.total_cost_usd += cost_usd;

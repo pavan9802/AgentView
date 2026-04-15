@@ -28,7 +28,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
   const loopState: LoopState = {
     turnStartedAt: Date.now(),
     turnNumber: session.total_turns,
-    currentTurnId: "",
+    currentTurnId: crypto.randomUUID(),
     toolTimestamps: new Map(),
   };
 
