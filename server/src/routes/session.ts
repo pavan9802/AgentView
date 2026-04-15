@@ -4,7 +4,15 @@ import { runAgentSession } from "../agent/runner";
 import { send } from "../ws/send";
 
 export async function handlePostSession(req: Request): Promise<Response> {
-  const body = (await req.json()) as StartSessionRequest;
+  let body: StartSessionRequest;
+  try {
+    body = (await req.json()) as StartSessionRequest;
+  } catch {
+    return new Response(JSON.stringify({ error: "Invalid JSON body", code: "invalid_request" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   if (!body.prompt?.trim()) {
     return new Response(JSON.stringify({ error: "prompt is required", code: "invalid_request" }), {
@@ -72,7 +80,15 @@ export async function handlePostTurn(req: Request, sessionId: string): Promise<R
     });
   }
 
-  const body = (await req.json()) as AddTurnRequest;
+  let body: AddTurnRequest;
+  try {
+    body = (await req.json()) as AddTurnRequest;
+  } catch {
+    return new Response(JSON.stringify({ error: "Invalid JSON body", code: "invalid_request" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   if (!body.prompt?.trim()) {
     return new Response(JSON.stringify({ error: "prompt is required", code: "invalid_request" }), {
