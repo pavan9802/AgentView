@@ -68,18 +68,23 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
       console.log(`[session:${sessionId}]`, JSON.stringify(message));
     }
 
-   
-    session.status = "complete";
-    session.completed_at = Date.now();
-    session.result_text = resultText;
-    send({
-      type: "session_complete",
-      session_id: sessionId,
-      total_cost_usd: session.total_cost_usd,
-      total_turns: session.total_turns,
-      result_text: resultText,
-    });
-    console.log(`[session:${sessionId}] complete — cost: $${session.total_cost_usd.toFixed(4)}, turns: ${session.total_turns}`);
+    // Guard against the race where budget/max-turns abort fires on the last turn:
+    // the SDK generator may have already finished cleanly, so for-await exits
+    // normally instead of throwing AbortError. In that case kill_reason is already
+    // set and session_killed was already broadcast — don't overwrite.
+    if (session.kill_reason === null) {
+      session.status = "complete";
+      session.completed_at = Date.now();
+      session.result_text = resultText;
+      send({
+        type: "session_complete",
+        session_id: sessionId,
+        total_cost_usd: session.total_cost_usd,
+        total_turns: session.total_turns,
+        result_text: resultText,
+      });
+      console.log(`[session:${sessionId}] complete — cost: $${session.total_cost_usd.toFixed(4)}, turns: ${session.total_turns}`);
+    }
   } catch (err) {
   
     session.completed_at = Date.now();
