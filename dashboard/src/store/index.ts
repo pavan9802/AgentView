@@ -3,7 +3,9 @@ import type { Session, Turn, ToolCall, KeyStatus } from "../lib/types";
 import type { PendingApproval, SyncStatus, WsInitMessage } from "@agentview/shared";
 import { wsClient } from "../ws/client";
 
-export type AgentViewState = {
+// ── State ─────────────────────────────────────────────────────────────────────
+
+type State = {
   sessions: Record<string, Session>;
   turns: Record<string, Turn[]>;            // keyed by session_id, sorted by created_at asc
   toolCalls: Record<string, ToolCall[]>;    // keyed by session_id, sorted by created_at asc
@@ -12,8 +14,11 @@ export type AgentViewState = {
   keyStatus: KeyStatus;
   syncStatus: SyncStatus | null;
   wsConnected: boolean;
+};
 
-  // actions
+// ── Actions ───────────────────────────────────────────────────────────────────
+
+type Actions = {
   upsertSession: (session: Session) => void;
   upsertTurn: (turn: Turn) => void;
   upsertToolCall: (tc: ToolCall) => void;
@@ -24,9 +29,13 @@ export type AgentViewState = {
   setSyncStatus: (status: SyncStatus) => void;
   setWsConnected: (connected: boolean) => void;
   initFromServer: (msg: WsInitMessage) => void;
-  sendApproval: (sessionId: string, toolCallId: string, approved: boolean) => void;
+  sendApprovalResponse: (sessionId: string, toolCallId: string, approved: boolean) => void;
   sendKill: (sessionId: string) => void;
 };
+
+export type AgentViewState = State & Actions;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function upsertIntoArray<T extends { id: string; created_at: number }>(
   existing: T[],
@@ -34,7 +43,6 @@ function upsertIntoArray<T extends { id: string; created_at: number }>(
 ): T[] {
   const idx = existing.findIndex((x) => x.id === item.id);
   if (idx === -1) {
-    // Insert in sorted position
     const insertAt = existing.findIndex((x) => x.created_at > item.created_at);
     if (insertAt === -1) return [...existing, item];
     return [...existing.slice(0, insertAt), item, ...existing.slice(insertAt)];
@@ -44,7 +52,9 @@ function upsertIntoArray<T extends { id: string; created_at: number }>(
   return next;
 }
 
-export const useAgentView = create<AgentViewState>((set) => ({
+// ── Store ─────────────────────────────────────────────────────────────────────
+
+export const useAgentView = create<AgentViewState>((set, get) => ({
   sessions: {},
   turns: {},
   toolCalls: {},
@@ -126,29 +136,23 @@ export const useAgentView = create<AgentViewState>((set) => ({
       sessions[s.id] = s;
     }
 
-    set({
-      sessions,
-      turns,
-      toolCalls,
-      pendingApprovals: msg.pending_approvals.reduce<Record<string, PendingApproval[]>>(
-        (acc, a) => { (acc[a.session_id] ??= []).push(a); return acc; },
-        {},
-      ),
-      keyStatus: msg.key_status,
-      syncStatus: msg.sync_status,
-    });
+    const pendingApprovals = msg.pending_approvals.reduce<Record<string, PendingApproval[]>>(
+      (acc, a) => { (acc[a.session_id] ??= []).push(a); return acc; },
+      {},
+    );
+
+    // Reset activeId if the selected session is no longer in the snapshot
+    const currentActiveId = get().activeId;
+    const activeId = currentActiveId != null && sessions[currentActiveId] != null
+      ? currentActiveId
+      : null;
+
+    set({ sessions, turns, toolCalls, pendingApprovals, keyStatus: msg.key_status, syncStatus: msg.sync_status, activeId });
   },
 
-  sendApproval: (sessionId, toolCallId, approved) => {
+  sendApprovalResponse: (sessionId, toolCallId, approved) => {
     wsClient.send({ type: "approval_response", session_id: sessionId, tool_call_id: toolCallId, approved });
-    set((state) => ({
-      pendingApprovals: {
-        ...state.pendingApprovals,
-        [sessionId]: (state.pendingApprovals[sessionId] ?? []).filter(
-          (a) => a.tool_call_id !== toolCallId,
-        ),
-      },
-    }));
+    get().removePendingApproval(sessionId, toolCallId);
   },
 
   sendKill: (sessionId) => {
