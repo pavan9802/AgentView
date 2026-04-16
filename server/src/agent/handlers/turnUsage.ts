@@ -11,6 +11,7 @@ export type LoopState = {
   turnNumber: number;
   currentTurnId: string;
   toolTimestamps: Map<string, number>;
+  resultText: string;
 };
 
 export function handleTurnUsage(

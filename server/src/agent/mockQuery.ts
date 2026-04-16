@@ -3,9 +3,11 @@ type HookMatcher = { hooks: Array<(input: unknown) => Promise<{ continue: boolea
 type MockQueryOptions = {
   abortController?: AbortController;
   hooks?: {
+    SessionStart?: HookMatcher[];
     PreToolUse?: HookMatcher[];
     PostToolUse?: HookMatcher[];
     PostToolUseFailure?: HookMatcher[];
+    Stop?: HookMatcher[];
   };
   canUseTool?: (
     toolName: string,
@@ -98,8 +100,12 @@ export async function* mockQuery(params: {
 
   console.log("[mock-sdk] starting mock session for prompt:", prompt);
 
-  // System init — SDK always emits this first
-  yield { type: "system", subtype: "init", session_id: `mock-session-${crypto.randomUUID()}` };
+  const mockSessionId = `mock-session-${crypto.randomUUID()}`;
+  await callHooks(options.hooks?.SessionStart, {
+    hook_event_name: "SessionStart",
+    session_id: mockSessionId,
+    source: (options as { resume?: string }).resume ? "resume" : "startup",
+  });
 
   // --- Turn 1 ---
   await sleep(300, signal);
@@ -156,6 +162,8 @@ export async function* mockQuery(params: {
       },
     ],
   };
+
+  await callHooks(options.hooks?.Stop, { hook_event_name: "Stop" });
 
   console.log("[mock-sdk] mock session complete");
 }
