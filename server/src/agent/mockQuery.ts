@@ -5,6 +5,7 @@ type MockQueryOptions = {
   hooks?: {
     PreToolUse?: HookMatcher[];
     PostToolUse?: HookMatcher[];
+    PostToolUseFailure?: HookMatcher[];
   };
   canUseTool?: (
     toolName: string,
@@ -43,6 +44,7 @@ async function runMockTool(
   toolInput: Record<string, string>,
   toolResponse: string,
   options: MockQueryOptions,
+  simulateFailure?: string,
 ): Promise<void> {
   const signal = options.abortController?.signal;
   const toolUseId = crypto.randomUUID();
@@ -68,6 +70,16 @@ async function runMockTool(
   }
 
   await sleep(400 + Math.random() * 600, signal);
+
+  if (simulateFailure) {
+    await callHooks(options.hooks?.PostToolUseFailure, {
+      tool_use_id: toolUseId,
+      tool_name: toolName,
+      tool_input: toolInput,
+      error: simulateFailure,
+    });
+    return;
+  }
 
   await callHooks(options.hooks?.PostToolUse, {
     tool_use_id: toolUseId,
@@ -117,6 +129,14 @@ export async function* mockQuery(params: {
     { file_path: "src/index.ts", old_string: "// entry point", new_string: "// updated entry point" },
     "File updated successfully.",
     options,
+  );
+  await sleep(200, signal);
+  await runMockTool(
+    "Write",
+    { file_path: "/read-only/config.json", content: "{}" },
+    "",
+    options,
+    "EACCES: permission denied, open '/read-only/config.json'",
   );
   await sleep(200, signal);
   // Bash requires approval by default — canUseTool will pause and send approval_required
