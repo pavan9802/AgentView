@@ -1,4 +1,4 @@
-import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage, WsSessionCompleteMessage, WsSessionErroredMessage, WsSessionKilledMessage } from "@agentview/shared";
+import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage, WsSessionCompleteMessage, WsSessionErroredMessage, WsSessionKilledMessage, WsKeyStatusMessage, WsSyncStatusMessage } from "@agentview/shared";
 import { useAgentView } from "../store";
 
 // ── Handler 1: init ───────────────────────────────────────────────────────────
@@ -50,6 +50,18 @@ function handleSessionComplete(msg: WsSessionCompleteMessage): void {
       result_text: msg.result_text,
     });
   }
+}
+
+// ── Handler 10: key_status ────────────────────────────────────────────────────
+
+function handleKeyStatus(msg: WsKeyStatusMessage): void {
+  useAgentView.getState().setKeyStatus(msg.status);
+}
+
+// ── Handler 11: sync_status ───────────────────────────────────────────────────
+
+function handleSyncStatus(msg: WsSyncStatusMessage): void {
+  useAgentView.getState().setSyncStatus(msg.status);
 }
 
 // ── Handler 9: session_killed ─────────────────────────────────────────────────
@@ -104,5 +116,7 @@ export function handleMessage(msg: WsServerToClient): void {
     case "session_complete":    return handleSessionComplete(msg);
     case "session_errored":     return handleSessionErrored(msg);
     case "session_killed":      return handleSessionKilled(msg);
+    case "key_status":          return handleKeyStatus(msg);
+    case "sync_status":         return handleSyncStatus(msg);
   }
 }
