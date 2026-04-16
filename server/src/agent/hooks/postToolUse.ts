@@ -24,7 +24,7 @@ export function makePostToolUseHook(
         if (wasApprovalRequired) session.approvedToolUseIds.delete(msg.tool_use_id);
 
         const toolCall: ToolCall = {
-          id: msg.tool_use_id,
+          id: crypto.randomUUID(),
           session_id: sessionId,
           turn_id: loopState.currentTurnId,
           tool_name: msg.tool_name,
