@@ -21,6 +21,7 @@ export function makeStopHook(
             type: "session_complete",
             session_id: sessionId,
             total_cost_usd: session.total_cost_usd,
+            total_tokens: session.total_tokens,
             total_turns: session.total_turns,
             result_text: loopState.resultText,
           });

@@ -54,6 +54,7 @@ export type WsSessionCompleteMessage = {
   type: "session_complete";
   session_id: string;
   total_cost_usd: number;
+  total_tokens: number;
   total_turns: number;
   result_text: string;
 };
