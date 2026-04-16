@@ -1,11 +1,12 @@
 import { query as realQuery } from "@anthropic-ai/claude-agent-sdk";
 import { mockQuery } from "./mockQuery";
 import { pendingApprovals, sessions } from "../state";
-import { handleSystemInit } from "./handlers/systemInit";
 import { handleTurnUsage, type LoopState } from "./handlers/turnUsage";
 import { makePreToolUseHook } from "./hooks/preToolUse";
 import { makePostToolUseHook } from "./hooks/postToolUse";
 import { makePostToolUseFailureHook } from "./hooks/postToolUseFailure";
+import { makeSessionStartHook } from "./hooks/sessionStart";
+import { makeStopHook } from "./hooks/stop";
 import { makeCanUseTool } from "./hooks/canUseTool";
 import { send } from "../ws/send";
 
@@ -31,9 +32,8 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
     turnNumber: session.total_turns,
     currentTurnId: crypto.randomUUID(),
     toolTimestamps: new Map(),
+    resultText: "",
   };
-
-  let resultText = "";
 
   try {
     for await (const message of query({
@@ -45,18 +45,19 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
         model: "claude-haiku-4-5",
         abortController: session.abortController,
         hooks: {
+          SessionStart: [makeSessionStartHook(session, sessionId, isResume)],
           PreToolUse: [makePreToolUseHook(loopState)],
           PostToolUse: [makePostToolUseHook(session, sessionId, loopState)],
           PostToolUseFailure: [makePostToolUseFailureHook(session, sessionId, loopState)],
+          Stop: [makeStopHook(session, sessionId, loopState)],
         },
         canUseTool: makeCanUseTool(session, sessionId),
         ...(isResume ? { resume: session.sdk_session_id! } : {}),
       },
     })) {
-      handleSystemInit(message, session, sessionId, isResume);
       handleTurnUsage(message, session, sessionId, loopState);
 
-      // Track the last assistant text content for result_text
+      // Track the last assistant text for the Stop hook to include in session_complete.
       if (
         typeof message === "object" && message !== null &&
         "role" in message && (message as { role: unknown }).role === "assistant" &&
@@ -68,32 +69,14 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
             typeof b === "object" && b !== null && "type" in b && (b as { type: unknown }).type === "text"
           )
           .map((b) => b.text);
-        if (texts.length > 0) resultText = texts.join("\n");
+        if (texts.length > 0) loopState.resultText = texts.join("\n");
       }
 
       // Log every message for observability during development
       console.log(`[session:${sessionId}]`, JSON.stringify(message));
     }
-
-    // Guard against the race where budget/max-turns abort fires on the last turn:
-    // the SDK generator may have already finished cleanly, so for-await exits
-    // normally instead of throwing AbortError. In that case kill_reason is already
-    // set and session_killed was already broadcast — don't overwrite.
-    if (session.kill_reason === null) {
-      session.status = "complete";
-      session.completed_at = Date.now();
-      session.result_text = resultText;
-      send({
-        type: "session_complete",
-        session_id: sessionId,
-        total_cost_usd: session.total_cost_usd,
-        total_turns: session.total_turns,
-        result_text: resultText,
-      });
-      console.log(`[session:${sessionId}] complete — cost: $${session.total_cost_usd.toFixed(4)}, turns: ${session.total_turns}`);
-    }
   } catch (err) {
-  
+
     session.completed_at = Date.now();
 
     if (err instanceof Error && err.name === "AbortError") {
