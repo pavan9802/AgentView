@@ -1,4 +1,4 @@
-import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage } from "@agentview/shared";
+import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage, WsSessionCompleteMessage, WsSessionErroredMessage, WsSessionKilledMessage } from "@agentview/shared";
 import { useAgentView } from "../store";
 
 // ── Handler 1: init ───────────────────────────────────────────────────────────
@@ -34,6 +34,46 @@ function handleToolCall(msg: WsToolCallMessage): void {
   removePendingApproval(msg.session_id, msg.tool_call.id);
 }
 
+// ── Handler 7: session_complete ───────────────────────────────────────────────
+
+function handleSessionComplete(msg: WsSessionCompleteMessage): void {
+  const { sessions, upsertSession } = useAgentView.getState();
+  const existing = sessions[msg.session_id];
+  if (existing) {
+    upsertSession({
+      ...existing,
+      status: "complete",
+      completed_at: Date.now(),
+      total_cost_usd: msg.total_cost_usd,
+      total_tokens: msg.total_tokens,
+      total_turns: msg.total_turns,
+      result_text: msg.result_text,
+    });
+  }
+}
+
+// ── Handler 9: session_killed ─────────────────────────────────────────────────
+
+function handleSessionKilled(msg: WsSessionKilledMessage): void {
+  const { sessions, upsertSession, clearPendingApprovalsForSession } = useAgentView.getState();
+  const existing = sessions[msg.session_id];
+  if (existing) {
+    upsertSession({ ...existing, status: "killed", kill_reason: msg.reason });
+  }
+  clearPendingApprovalsForSession(msg.session_id);
+}
+
+// ── Handler 8: session_errored ────────────────────────────────────────────────
+
+function handleSessionErrored(msg: WsSessionErroredMessage): void {
+  const { sessions, upsertSession, clearPendingApprovalsForSession } = useAgentView.getState();
+  const existing = sessions[msg.session_id];
+  if (existing) {
+    upsertSession({ ...existing, status: "errored", error_type: msg.error_type, error_message: msg.error_message });
+  }
+  clearPendingApprovalsForSession(msg.session_id);
+}
+
 // ── Handler 6: approval_required ─────────────────────────────────────────────
 
 function handleApprovalRequired(msg: WsApprovalRequiredMessage): void {
@@ -60,6 +100,9 @@ export function handleMessage(msg: WsServerToClient): void {
     case "turn_update":      return handleTurnUpdate(msg);
     case "tool_call":        return handleToolCall(msg);
     case "tool_result":        return handleToolResult(msg);
-    case "approval_required":  return handleApprovalRequired(msg);
+    case "approval_required":   return handleApprovalRequired(msg);
+    case "session_complete":    return handleSessionComplete(msg);
+    case "session_errored":     return handleSessionErrored(msg);
+    case "session_killed":      return handleSessionKilled(msg);
   }
 }

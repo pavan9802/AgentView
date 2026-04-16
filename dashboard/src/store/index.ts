@@ -24,6 +24,7 @@ type Actions = {
   upsertToolCall: (tc: ToolCall) => void;
   addPendingApproval: (approval: PendingApproval) => void;
   removePendingApproval: (sessionId: string, toolCallId: string) => void;
+  clearPendingApprovalsForSession: (sessionId: string) => void;
   setActiveId: (id: string | null) => void;
   setKeyStatus: (status: KeyStatus) => void;
   setSyncStatus: (status: SyncStatus) => void;
@@ -104,6 +105,11 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
           (a) => a.tool_call_id !== toolCallId,
         ),
       },
+    })),
+
+  clearPendingApprovalsForSession: (sessionId) =>
+    set((state) => ({
+      pendingApprovals: { ...state.pendingApprovals, [sessionId]: [] },
     })),
 
   setActiveId: (id) => set({ activeId: id }),
