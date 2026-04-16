@@ -5,6 +5,7 @@ import { handleSystemInit } from "./handlers/systemInit";
 import { handleTurnUsage, type LoopState } from "./handlers/turnUsage";
 import { makePreToolUseHook } from "./hooks/preToolUse";
 import { makePostToolUseHook } from "./hooks/postToolUse";
+import { makePostToolUseFailureHook } from "./hooks/postToolUseFailure";
 import { makeCanUseTool } from "./hooks/canUseTool";
 import { send } from "../ws/send";
 
@@ -46,6 +47,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
         hooks: {
           PreToolUse: [makePreToolUseHook(loopState)],
           PostToolUse: [makePostToolUseHook(session, sessionId, loopState)],
+          PostToolUseFailure: [makePostToolUseFailureHook(session, sessionId, loopState)],
         },
         canUseTool: makeCanUseTool(session, sessionId),
         ...(isResume ? { resume: session.sdk_session_id! } : {}),
