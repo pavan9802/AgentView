@@ -20,6 +20,10 @@ export function makeCanUseTool(session: SessionState, sessionId: string): CanUse
 
     const approved = await new Promise<boolean>((resolve) => {
       pendingApprovals.set(toolUseID, resolve);
+      session.abortController.signal.addEventListener("abort", () => {
+        pendingApprovals.delete(toolUseID);
+        resolve(false);
+      }, { once: true });
     });
 
     pendingApprovalDetails.delete(toolUseID);
