@@ -1,4 +1,4 @@
-import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage } from "@agentview/shared";
+import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage } from "@agentview/shared";
 import { useAgentView } from "../store";
 
 // ── Handler 1: init ───────────────────────────────────────────────────────────
@@ -20,10 +20,18 @@ function handleSessionStarted(msg: WsSessionStartedMessage): void {
 function handleTurnUpdate(msg: WsTurnUpdateMessage): void {
   const { upsertTurn, upsertSession, sessions } = useAgentView.getState();
   upsertTurn(msg.turn);
-  const existing = sessions[msg.session_id];
-  if (existing) {
-    upsertSession({ ...existing, total_cost_usd: msg.cumulative_cost_usd, total_tokens: msg.cumulative_tokens });
+  const existingSession = sessions[msg.session_id];
+  if (existingSession) {
+    upsertSession({ ...existingSession, total_cost_usd: msg.cumulative_cost_usd, total_tokens: msg.cumulative_tokens });
   }
+}
+
+// ── Handler 4: tool_call ──────────────────────────────────────────────────────
+
+function handleToolCall(msg: WsToolCallMessage): void {
+  const { upsertToolCall, removePendingApproval } = useAgentView.getState();
+  upsertToolCall(msg.tool_call);
+  removePendingApproval(msg.session_id, msg.tool_call.id);
 }
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────
@@ -33,5 +41,6 @@ export function handleMessage(msg: WsServerToClient): void {
     case "init":             return handleInit(msg);
     case "session_started":  return handleSessionStarted(msg);
     case "turn_update":      return handleTurnUpdate(msg);
+    case "tool_call":        return handleToolCall(msg);
   }
 }
