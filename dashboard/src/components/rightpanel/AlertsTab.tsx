@@ -26,7 +26,23 @@ function AlertsTab() {
       {pending.length > 0 && (
         <div className="alert alert-warn">
           <span className="aicon">⚠</span>
-          <div className="abody"><strong>Approval pending</strong> — Bash command waiting for review</div>
+          <div className="abody">
+            <strong>Approval pending</strong>
+            {pending.length === 1
+              ? (() => {
+                  const p = pending[0];
+                  if (!p) return " — tool call waiting for review";
+                  if (p.tool_name === "bash") {
+                    try {
+                      const input = JSON.parse(p.tool_input) as Record<string, unknown>;
+                      const cmd = typeof input["command"] === "string" ? input["command"] : null;
+                      if (cmd) return ` — ${cmd.length > 60 ? cmd.slice(0, 60) + "…" : cmd}`;
+                    } catch { /* fall through */ }
+                  }
+                  return ` — ${p.tool_name} waiting for review`;
+                })()
+              : ` — ${pending.length} tool calls waiting for review`}
+          </div>
         </div>
       )}
       {budgetPct > 70 && (
