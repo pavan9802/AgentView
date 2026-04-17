@@ -1,15 +1,13 @@
 import { memo, useState } from "react";
+import { useSessions } from "../../hooks/useSessions";
 
-interface PromptBarProps {
-  onSubmit: (prompt: string) => void;
-}
-
-function PromptBar({ onSubmit }: PromptBarProps) {
+function PromptBar() {
+  const { startSession, isStarting } = useSessions();
   const [prompt, setPrompt] = useState("");
 
   const handleSubmit = () => {
     if (!prompt.trim()) return;
-    onSubmit(prompt);
+    void startSession(prompt.trim());
     setPrompt("");
   };
 
@@ -23,7 +21,7 @@ function PromptBar({ onSubmit }: PromptBarProps) {
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
       />
-      <button className="pbtn" onClick={handleSubmit} disabled={!prompt.trim()}>
+      <button className="pbtn" onClick={handleSubmit} disabled={!prompt.trim() || isStarting}>
         RUN
       </button>
     </div>

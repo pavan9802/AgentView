@@ -1,14 +1,13 @@
 import { memo } from "react";
 import { BUDGET } from "../lib/constants";
+import { useAgentView } from "../store";
+import { selectRunningCount, selectTotalCost, selectBudgetPct } from "../store/selectors";
 
-interface TopbarProps {
-  runningCount: number;
-  totalCost: number;
-  sessionCount: number;
-  budgetPct: number;
-}
-
-function Topbar({ runningCount, totalCost, sessionCount, budgetPct }: TopbarProps) {
+function Topbar() {
+  const runningCount = useAgentView(selectRunningCount);
+  const totalCost = useAgentView(selectTotalCost);
+  const budgetPct = useAgentView(selectBudgetPct);
+  const sessionCount = useAgentView((s) => Object.keys(s.sessions).length);
   return (
     <div className="topbar">
       <div className="logo">AGENTVIEW</div>

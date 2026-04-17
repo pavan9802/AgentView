@@ -1,5 +1,3 @@
-import type { FeedItem } from "../../lib/types";
-
 const TOOL_COLORS: Record<string, string> = {
   Read: "var(--blue)",
   Write: "var(--amber)",
@@ -9,18 +7,13 @@ const TOOL_COLORS: Record<string, string> = {
   WebSearch: "var(--blue)",
 };
 
-export default function ToolUsage({ feed }: { feed: FeedItem[] }) {
-  const counts: Record<string, number> = {};
-  feed.forEach((f) => {
-    if (f.type === "tool") counts[f.tool] = (counts[f.tool] ?? 0) + 1;
-  });
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  const max = sorted[0]?.[1] ?? 1;
+export default function ToolUsage({ feed }: { feed: { tool: string; count: number }[] }) {
+  const max = feed[0]?.count ?? 1;
   return (
     <div>
       <div className="chtitle">Tool usage</div>
       <div className="blist">
-        {sorted.map(([tool, count]) => (
+        {feed.map(({ tool, count }) => (
           <div className="brow" key={tool}>
             <span className="blbl" style={{ width: 66 }}>{tool}</span>
             <div className="bwrap">
