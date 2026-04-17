@@ -55,6 +55,19 @@ function upsertIntoArray<T extends { id: string; created_at: number }>(
   return next;
 }
 
+// ── Kill rollback timers ───────────────────────────────────────────────────────
+// Keyed by session_id. Cleared when server confirms session_killed.
+
+const killTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+export function cancelKillTimer(sessionId: string): void {
+  const t = killTimers.get(sessionId);
+  if (t !== undefined) {
+    clearTimeout(t);
+    killTimers.delete(sessionId);
+  }
+}
+
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 export const useAgentView = create<AgentViewState>((set, get) => ({
@@ -164,6 +177,14 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
   },
 
   sendKill: (sessionId) => {
+    const existing = get().sessions[sessionId];
+    if (!existing) return;
+    get().upsertSession({ ...existing, status: "killed" });
     wsClient.send({ type: "kill_session", session_id: sessionId });
+    const timer = setTimeout(() => {
+      killTimers.delete(sessionId);
+      get().upsertSession({ ...existing });
+    }, 5_000);
+    killTimers.set(sessionId, timer);
   },
 }));

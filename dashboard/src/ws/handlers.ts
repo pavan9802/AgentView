@@ -1,5 +1,5 @@
 import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage, WsSessionCompleteMessage, WsSessionErroredMessage, WsSessionKilledMessage, WsKeyStatusMessage, WsSyncStatusMessage } from "@agentview/shared";
-import { useAgentView } from "../store";
+import { useAgentView, cancelKillTimer } from "../store";
 
 // ── Handler 1: init ───────────────────────────────────────────────────────────
 
@@ -67,6 +67,7 @@ function handleSyncStatus(msg: WsSyncStatusMessage): void {
 // ── Handler 9: session_killed ─────────────────────────────────────────────────
 
 function handleSessionKilled(msg: WsSessionKilledMessage): void {
+  cancelKillTimer(msg.session_id);
   const { sessions, upsertSession, clearPendingApprovalsForSession } = useAgentView.getState();
   const existing = sessions[msg.session_id];
   if (existing) {
