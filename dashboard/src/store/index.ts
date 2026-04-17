@@ -3,6 +3,8 @@ import type { Session, Turn, ToolCall, KeyStatus } from "../lib/types";
 import type { PendingApproval, SyncStatus, WsInitMessage } from "@agentview/shared";
 import { wsClient } from "../ws/client";
 
+type WsStatus = "connecting" | "connected" | "disconnected";
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 type State = {
@@ -13,7 +15,7 @@ type State = {
   activeId: string | null;
   keyStatus: KeyStatus;
   syncStatus: SyncStatus | null;
-  wsConnected: boolean;
+  wsStatus: WsStatus;
 };
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -28,7 +30,7 @@ type Actions = {
   setActiveId: (id: string | null) => void;
   setKeyStatus: (status: KeyStatus) => void;
   setSyncStatus: (status: SyncStatus) => void;
-  setWsConnected: (connected: boolean) => void;
+  setWsStatus: (status: WsStatus) => void;
   initFromServer: (msg: WsInitMessage) => void;
   sendApprovalResponse: (sessionId: string, toolCallId: string, approved: boolean) => void;
   sendKill: (sessionId: string) => void;
@@ -63,7 +65,7 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
   activeId: null,
   keyStatus: "unknown",
   syncStatus: null,
-  wsConnected: false,
+  wsStatus: "connecting",
 
   upsertSession: (session) =>
     set((state) => ({
@@ -118,7 +120,7 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
 
   setSyncStatus: (status) => set({ syncStatus: status }),
 
-  setWsConnected: (connected) => set({ wsConnected: connected }),
+  setWsStatus: (status) => set({ wsStatus: status }),
 
   initFromServer: (msg) => {
     const turns: Record<string, Turn[]> = {};

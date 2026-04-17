@@ -18,12 +18,13 @@ function clearReconnectTimer(): void {
 }
 
 function openSocket(): void {
+  useAgentView.getState().setWsStatus("connecting");
   ws = new WebSocket("ws://localhost:3000/ws");
 
   ws.onopen = () => {
     reconnectDelay = RECONNECT_BASE_MS;
     clearReconnectTimer();
-    useAgentView.getState().setWsConnected(true);
+    useAgentView.getState().setWsStatus("connected");
   };
 
   ws.onmessage = (event: MessageEvent) => {
@@ -38,7 +39,7 @@ function openSocket(): void {
   };
 
   ws.onclose = () => {
-    useAgentView.getState().setWsConnected(false);
+    useAgentView.getState().setWsStatus("disconnected");
     ws = null;
     reconnectTimer = setTimeout(() => {
       reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX_MS);
