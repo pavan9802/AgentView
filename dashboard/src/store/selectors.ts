@@ -1,7 +1,7 @@
 import type { Session, Turn, ToolCall } from "../lib/types";
 import type { PendingApproval } from "@agentview/shared";
 import type { FeedItem, TokenPoint, LatencyPoint } from "../lib/types";
-import { BUDGET, CTX_MAX } from "../lib/constants";
+import { BUDGET } from "../lib/constants";
 import type { AgentViewState } from "./index";
 
 export const selectSelectedSession = (state: AgentViewState): Session | undefined =>
@@ -22,9 +22,9 @@ export const selectRunningCount = (state: AgentViewState): number =>
 export const selectCtxPct =
   (sessionId: string) =>
   (state: AgentViewState): number => {
-    const session = state.sessions[sessionId];
-    if (!session) return 0;
-    return Math.min((session.total_tokens / CTX_MAX) * 100, 100);
+    const turns = state.turns[sessionId];
+    if (!turns || turns.length === 0) return 0;
+    return turns.at(-1)!.context_fill_pct;
   };
 
 export const selectTurnsForSession =
