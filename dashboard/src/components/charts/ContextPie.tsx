@@ -3,9 +3,9 @@ import { PIE_COLORS, CTX_LABELS } from "../../lib/constants";
 
 export default function ContextPie({ tokens }: { tokens: number }) {
   const sys = 8;
-  const hist = Math.min(50 + Math.floor(tokens / 5000), 72);
+  const hist = Math.min(50 + Math.floor(tokens / 5000), 70);
   const tools = 18;
-  const head = Math.max(100 - sys - hist - tools, 4);
+  const head = 100 - sys - hist - tools;
   const data = [{value:sys},{value:hist},{value:tools},{value:head}];
   return (
     <div>
