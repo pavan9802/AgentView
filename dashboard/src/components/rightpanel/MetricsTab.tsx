@@ -3,15 +3,17 @@ import TokenChart from "../charts/TokenChart";
 import ContextPie from "../charts/ContextPie";
 import { BUDGET, CTX_MAX } from "../../lib/constants";
 import { useAgentView } from "../../store";
-import { selectSelectedSession, selectTokenPoints, selectPendingForSession } from "../../store/selectors";
+import { selectSelectedSession, selectTokenPoints, selectPendingForSession, selectCtxPct } from "../../store/selectors";
 
 function MetricsTab() {
   const activeId = useAgentView((s) => s.activeId);
   const selectedSession = useAgentView(selectSelectedSession);
   const tokenPointsSelector = useMemo(() => selectTokenPoints(activeId ?? ""), [activeId]);
   const pendingSelector = useMemo(() => selectPendingForSession(activeId ?? ""), [activeId]);
+  const ctxPctSelector = useMemo(() => selectCtxPct(activeId ?? ""), [activeId]);
   const tokenPoints = useAgentView(tokenPointsSelector);
   const pending = useAgentView(pendingSelector);
+  const ctxPct = useAgentView(ctxPctSelector);
   const sendApprovalResponse = useAgentView((s) => s.sendApprovalResponse);
 
   if (!selectedSession) return null;
@@ -45,7 +47,7 @@ function MetricsTab() {
       <div className="divider" />
       <TokenChart data={tokenPoints} />
       <div className="divider" />
-      <ContextPie tokens={selectedSession.total_tokens} />
+      <ContextPie ctxPct={ctxPct} />
     </>
   );
 }
