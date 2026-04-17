@@ -30,9 +30,9 @@ export async function handlePostSession(req: Request): Promise<Response> {
     abortController: new AbortController(),
     prompt: body.prompt.trim(),
     cwd,
-    status: "created",
+    status: "running",
     created_at: Date.now(),
-    started_at: null,
+    started_at: Date.now(),
     completed_at: null,
     total_cost_usd: 0,
     total_tokens: 0,
@@ -50,7 +50,7 @@ export async function handlePostSession(req: Request): Promise<Response> {
   // Fire and forget — agent runs in background
   void runAgentSession(id);
 
-  const response: StartSessionResponse = { id, status: "created" };
+  const response: StartSessionResponse = { id, status: "running" };
   return new Response(JSON.stringify(response), {
     status: 202,
     headers: { "Content-Type": "application/json" },

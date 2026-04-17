@@ -28,7 +28,7 @@
 //
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type SessionStatus = "created" | "running" | "complete" | "errored" | "killed";
+export type SessionStatus = "running" | "complete" | "errored" | "killed";
 export type KeyStatus = "valid" | "invalid" | "rate_limited" | "unknown";
 export type KillReason = "user_requested" | "budget_exceeded" | "max_turns_exceeded" | "server_shutdown";
 export type ErrorReason = "api_unavailable" | "invalid_api_key" | "model_error" | "rate_limited";

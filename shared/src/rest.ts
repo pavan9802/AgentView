@@ -3,7 +3,7 @@ import type { SyncStatus } from "./config";
 
 // ── POST /session ─────────────────────────────────────────────────────────────
 export type StartSessionRequest = { prompt: string; approval_required_tools?: string[] };
-export type StartSessionResponse = { id: string; status: "created" };
+export type StartSessionResponse = { id: string; status: "running" };
 
 // ── POST /session/:id/turn ────────────────────────────────────────────────────
 export type AddTurnRequest = { prompt: string };

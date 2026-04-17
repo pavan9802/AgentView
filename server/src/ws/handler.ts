@@ -41,7 +41,7 @@ export function handleWsMessage(_ws: BunServerWebSocket, data: string | Uint8Arr
     case "kill_session": {
       const session = sessions.get(msg.session_id);
       if (!session) return;
-      if (session.status !== "running" && session.status !== "created") return;
+      if (session.status !== "running") return;
       session.abortController.abort();
       session.status = "killed";
       session.kill_reason = "user_requested";
