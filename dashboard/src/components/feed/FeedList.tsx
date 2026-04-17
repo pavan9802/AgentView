@@ -1,16 +1,27 @@
-import type React from "react";
-import type { Session } from "../../lib/types";
+import { useRef, useEffect, useMemo } from "react";
 import { fmtTs } from "../../lib/utils";
+import { useAgentView } from "../../store";
+import { selectFeedItems } from "../../store/selectors";
 
-interface FeedListProps {
-  selectedSession: Session;
-  feedRef: React.RefObject<HTMLDivElement>;
-}
+function FeedList() {
+  const activeId = useAgentView((s) => s.activeId);
+  const isRunning = useAgentView((s) => s.activeId != null && s.sessions[s.activeId]?.status === "running");
+  const feedRef = useRef<HTMLDivElement>(null);
+  const feedItemsSelector = useMemo(() => selectFeedItems(activeId ?? ""), [activeId]);
+  const feedItems = useAgentView(feedItemsSelector);
 
-function FeedList({ selectedSession, feedRef }: FeedListProps) {
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    }, 60);
+    return () => clearTimeout(t);
+  }, [feedItems.length]);
+
+  if (!activeId) return <div className="feed" />;
+
   return (
     <div className="feed" ref={feedRef}>
-      {selectedSession.feed.map((item) => {
+      {feedItems.map((item) => {
         if (item.type === "turn") {
           return <div className="tmark" key={item.id}>TURN {item.turn}</div>;
         }
@@ -23,7 +34,7 @@ function FeedList({ selectedSession, feedRef }: FeedListProps) {
           </div>
         );
       })}
-      {selectedSession.status2 === "thinking" && (
+      {isRunning && (
         <div className="fi">
           <span className="fts">{fmtTs(Date.now())}</span>
           <span className="ftool t-thinking">···</span>

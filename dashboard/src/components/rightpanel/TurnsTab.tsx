@@ -1,17 +1,21 @@
+import { useMemo } from "react";
 import TurnLatency from "../charts/TurnLatency";
 import ToolUsage from "../charts/ToolUsage";
-import type { Session } from "../../lib/types";
+import { useAgentView } from "../../store";
+import { selectLatencyPoints, selectToolUsage } from "../../store/selectors";
 
-interface TurnsTabProps {
-  selectedSession: Session;
-}
+function TurnsTab() {
+  const activeId = useAgentView((s) => s.activeId);
+  const latencyPointsSelector = useMemo(() => selectLatencyPoints(activeId ?? ""), [activeId]);
+  const toolUsageSelector = useMemo(() => selectToolUsage(activeId ?? ""), [activeId]);
+  const latencyPoints = useAgentView(latencyPointsSelector);
+  const toolUsage = useAgentView(toolUsageSelector);
 
-function TurnsTab({ selectedSession }: TurnsTabProps) {
   return (
     <>
-      <TurnLatency turns={selectedSession.turnLatency} />
+      <TurnLatency turns={latencyPoints} />
       <div className="divider" />
-      <ToolUsage feed={selectedSession.feed} />
+      <ToolUsage feed={toolUsage} />
     </>
   );
 }

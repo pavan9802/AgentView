@@ -1,21 +1,29 @@
+import { useMemo } from "react";
 import { BUDGET } from "../../lib/constants";
-import type { Session } from "../../lib/types";
+import { useAgentView } from "../../store";
+import { selectSelectedSession, selectBudgetPct, selectTotalCost, selectCtxPct, selectLatencyPoints, selectPendingForSession } from "../../store/selectors";
 
-interface AlertsTabProps {
-  selectedSession: Session;
-  budgetPct: number;
-  totalCost: number;
-  ctxPct: number;
-}
+function AlertsTab() {
+  const activeId = useAgentView((s) => s.activeId);
+  const selectedSession = useAgentView(selectSelectedSession);
+  const budgetPct = useAgentView(selectBudgetPct);
+  const totalCost = useAgentView(selectTotalCost);
+  const ctxPctSelector = useMemo(() => selectCtxPct(activeId ?? ""), [activeId]);
+  const latencyPointsSelector = useMemo(() => selectLatencyPoints(activeId ?? ""), [activeId]);
+  const pendingSelector = useMemo(() => selectPendingForSession(activeId ?? ""), [activeId]);
+  const ctxPct = useAgentView(ctxPctSelector);
+  const latencyPoints = useAgentView(latencyPointsSelector);
+  const pending = useAgentView(pendingSelector);
 
-function AlertsTab({ selectedSession, budgetPct, totalCost, ctxPct }: AlertsTabProps) {
-  const hasSlowTurns = selectedSession.turnLatency.some((t) => t.latency > 3000);
-  const slowTurnCount = selectedSession.turnLatency.filter((t) => t.latency > 3000).length;
-  const noAlerts = !selectedSession.pendingApproval && budgetPct <= 70 && ctxPct <= 60 && !hasSlowTurns;
+  if (!selectedSession) return null;
+
+  const hasSlowTurns = latencyPoints.some((t) => t.latency > 3000);
+  const slowTurnCount = latencyPoints.filter((t) => t.latency > 3000).length;
+  const noAlerts = pending.length === 0 && budgetPct <= 70 && ctxPct <= 60 && !hasSlowTurns;
 
   return (
     <>
-      {selectedSession.pendingApproval && (
+      {pending.length > 0 && (
         <div className="alert alert-warn">
           <span className="aicon">⚠</span>
           <div className="abody"><strong>Approval pending</strong> — Bash command waiting for review</div>

@@ -1,12 +1,12 @@
 import { memo } from "react";
-import type { Session } from "../lib/types";
-interface SidebarProps {
-  sessions: Session[];
-  activeId: string;
-  onSelect: (id: string) => void;
-}
+import { useAgentView } from "../store";
+import { selectAllSessions } from "../store/selectors";
 
-function Sidebar({ sessions, activeId, onSelect }: SidebarProps) {
+function Sidebar() {
+  const sessions = useAgentView(selectAllSessions);
+  const activeId = useAgentView((s) => s.activeId);
+  const setActiveId = useAgentView((s) => s.setActiveId);
+
   return (
     <div className="sidebar">
       <div className="sb-hdr">Sessions — {sessions.length}</div>
@@ -14,19 +14,16 @@ function Sidebar({ sessions, activeId, onSelect }: SidebarProps) {
         {sessions.map((s) => (
           <div
             key={s.id}
-            className={`sitem${s.id === activeId ? " active" : ""}${s.unread > 0 ? " unread" : ""}`}
-            onClick={() => onSelect(s.id)}
+            className={`sitem${s.id === activeId ? " active" : ""}`}
+            onClick={() => setActiveId(s.id)}
           >
-            <div className="sname">{s.name}</div>
+            <div className="sname">{s.prompt}</div>
             <div className="smeta">
               <span className={`badge badge-${s.status}`}>{s.status}</span>
-              <span>${s.cost.toFixed(3)}</span>
+              <span>${s.total_cost_usd.toFixed(3)}</span>
             </div>
             <div className="smeta">
-              <span>{s.turn} turns · {(s.tokens / 1000).toFixed(1)}k tok</span>
-              {s.unread > 0 && (
-                <span style={{ color: "var(--green)", fontSize: 9 }}>{s.unread} new</span>
-              )}
+              <span>{s.total_turns} turns · {(s.total_tokens / 1000).toFixed(1)}k tok</span>
             </div>
           </div>
         ))}
