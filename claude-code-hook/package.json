@@ -1,0 +1,17 @@
+{
+  "name": "@agentview/claude-code-hook",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "agentview-hook": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build --compile --target=bun src/index.ts --outfile dist/agentview-hook",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0"
+  }
+}

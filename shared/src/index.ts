@@ -31,6 +31,21 @@ export type {
 } from "./websocket";
 
 export type {
+  AgentSessionStartedMessage,
+  AgentTurnUpdateMessage,
+  AgentToolCallMessage,
+  AgentToolResultMessage,
+  AgentApprovalRequiredMessage,
+  AgentSessionCompleteMessage,
+  AgentSessionErroredMessage,
+  AgentSessionKilledMessage,
+  AgentToServer,
+  ServerApprovalResponseMessage,
+  ServerKillMessage,
+  ServerToAgent,
+} from "./ingest";
+
+export type {
   StartSessionRequest,
   StartSessionResponse,
   AddTurnRequest,

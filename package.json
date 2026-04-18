@@ -5,7 +5,9 @@
   "workspaces": [
     "shared",
     "server",
-    "dashboard"
+    "dashboard",
+    "reporter",
+    "claude-code-hook"
   ],
   "scripts": {
     "dev": "bun run --filter ./server dev & bun run --filter ./dashboard dev",

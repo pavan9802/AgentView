@@ -1,5 +1,5 @@
 import type { WsClientToServer } from "@agentview/shared";
-import { client, pendingApprovals, pendingApprovalDetails, sessions, sessionToPublic, setClient } from "../state";
+import { agentConnections, client, pendingApprovals, pendingApprovalDetails, sessions, sessionToPublic, setClient } from "../state";
 import { send } from "./send";
 
 export function handleWsOpen(ws: BunServerWebSocket): void {
@@ -42,11 +42,20 @@ export function handleWsMessage(_ws: BunServerWebSocket, data: string | Uint8Arr
       const session = sessions.get(msg.session_id);
       if (!session) return;
       if (session.status !== "running") return;
-      session.abortController.abort();
+
+      const agentWs = agentConnections.get(msg.session_id);
+      if (agentWs) {
+        // External agent: forward the kill over its WS connection.
+        agentWs.send(JSON.stringify({ type: "kill", session_id: msg.session_id }));
+        agentConnections.delete(msg.session_id);
+      } else {
+        // Internal (SDK) session: abort the in-process runner.
+        session.abortController.abort();
+      }
+
       session.status = "killed";
       session.kill_reason = "user_requested";
-      // Drain any pending approval so the canUseTool await unblocks and the
-      // SDK loop can observe the abort signal.
+      // Drain any pending approval so blocked awaits resolve immediately.
       for (const [id, resolve] of pendingApprovals) {
         resolve(false);
         pendingApprovals.delete(id);

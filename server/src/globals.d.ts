@@ -12,10 +12,13 @@ declare const process: {
   on(event: string, listener: (...args: unknown[]) => void): void;
 };
 
+type WsConnectionRole = "dashboard" | "agent";
+
 interface BunServerWebSocket {
   send(data: string | ArrayBuffer | Uint8Array): void;
   close(code?: number, reason?: string): void;
   readonly readyState: number;
+  readonly data: { role: WsConnectionRole };
 }
 
 declare const Bun: {
@@ -27,5 +30,5 @@ declare const Bun: {
       message?(ws: BunServerWebSocket, data: string | Uint8Array): void;
       close?(ws: BunServerWebSocket, code?: number, reason?: string): void;
     };
-  }): { port: number; upgrade(req: Request): boolean };
+  }): { port: number; upgrade(req: Request, options?: { data: { role: WsConnectionRole } }): boolean };
 };
