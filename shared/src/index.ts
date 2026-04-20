@@ -23,6 +23,8 @@ export type {
   WsSessionKilledMessage,
   WsKeyStatusMessage,
   WsSyncStatusMessage,
+  WsSessionResumedMessage,
+  WsInjectionFailedMessage,
   WsServerToClient,
   WsApprovalResponseMessage,
   WsKillSessionMessage,

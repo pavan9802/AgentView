@@ -2,6 +2,7 @@ import type { StartSessionRequest, StartSessionResponse, AddTurnRequest, AddTurn
 import { sessions, sessionToPublic } from "../state";
 import { runAgentSession } from "../agent/runner";
 import { send } from "../ws/send";
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
 export async function handlePostSession(req: Request): Promise<Response> {
   let body: StartSessionRequest;
@@ -28,6 +29,7 @@ export async function handlePostSession(req: Request): Promise<Response> {
     id,
     sdk_session_id: null, // populated when the SDK emits its system:init message
     abortController: new AbortController(),
+    promptQueue: null, // set by runner once query() starts
     prompt: body.prompt.trim(),
     cwd,
     status: "running",
@@ -67,20 +69,6 @@ export async function handlePostTurn(req: Request, sessionId: string): Promise<R
     });
   }
 
-  if (session.status !== "complete") {
-    return new Response(JSON.stringify({ error: "Session is not complete", code: "invalid_state" }), {
-      status: 409,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  if (!session.sdk_session_id) {
-    return new Response(JSON.stringify({ error: "Session cannot be resumed", code: "not_resumable" }), {
-      status: 409,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
   let body: AddTurnRequest;
   try {
     body = (await req.json()) as AddTurnRequest;
@@ -98,7 +86,35 @@ export async function handlePostTurn(req: Request, sessionId: string): Promise<R
     });
   }
 
-  void runAgentSession(sessionId, body.prompt.trim());
+  const prompt = body.prompt.trim();
+
+  if (session.status === "running") {
+    // Live injection — push into the queue attached to the running query via streamInput
+    if (!session.promptQueue || !session.sdk_session_id) {
+      return new Response(JSON.stringify({ error: "Session is not ready for injection", code: "invalid_state" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const msg: SDKUserMessage = {
+      type: "user",
+      message: { role: "user", content: prompt },
+      parent_tool_use_id: null,
+      session_id: session.sdk_session_id,
+      priority: "next",
+    };
+    session.promptQueue.push(msg);
+  } else {
+    // Resume — session is complete, errored, or killed
+    if (!session.sdk_session_id) {
+      return new Response(JSON.stringify({ error: "Session cannot be resumed", code: "not_resumable" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    void runAgentSession(sessionId, prompt);
+    send({ type: "session_resumed", session: sessionToPublic(session) });
+  }
 
   const response: AddTurnResponse = { ok: true };
   return new Response(JSON.stringify(response), {

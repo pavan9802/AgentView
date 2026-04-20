@@ -1,4 +1,4 @@
-import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage, WsSessionCompleteMessage, WsSessionErroredMessage, WsSessionKilledMessage, WsKeyStatusMessage, WsSyncStatusMessage } from "@agentview/shared";
+import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage, WsSessionCompleteMessage, WsSessionErroredMessage, WsSessionKilledMessage, WsKeyStatusMessage, WsSyncStatusMessage, WsSessionResumedMessage, WsInjectionFailedMessage } from "@agentview/shared";
 import { useAgentView, cancelKillTimer } from "../store";
 
 // ── Handler 1: init ───────────────────────────────────────────────────────────
@@ -104,20 +104,41 @@ function handleToolResult(msg: WsToolResultMessage): void {
   console.log("[tool_result]", msg.session_id, msg.output);
 }
 
+// ── Handler 12: session_resumed ───────────────────────────────────────────────
+
+function handleSessionResumed(msg: WsSessionResumedMessage): void {
+  useAgentView.getState().upsertSession(msg.session);
+}
+
+// ── Handler 13: injection_failed ──────────────────────────────────────────────
+
+let injectionDismissTimer: ReturnType<typeof setTimeout> | null = null;
+
+function handleInjectionFailed(msg: WsInjectionFailedMessage): void {
+  if (injectionDismissTimer !== null) clearTimeout(injectionDismissTimer);
+  useAgentView.getState().setInjectionError(msg.error);
+  injectionDismissTimer = setTimeout(() => {
+    useAgentView.getState().setInjectionError(null);
+    injectionDismissTimer = null;
+  }, 5000);
+}
+
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 
 export function handleMessage(msg: WsServerToClient): void {
   switch (msg.type) {
-    case "init":             return handleInit(msg);
-    case "session_started":  return handleSessionStarted(msg);
-    case "turn_update":      return handleTurnUpdate(msg);
-    case "tool_call":        return handleToolCall(msg);
-    case "tool_result":        return handleToolResult(msg);
-    case "approval_required":   return handleApprovalRequired(msg);
-    case "session_complete":    return handleSessionComplete(msg);
-    case "session_errored":     return handleSessionErrored(msg);
-    case "session_killed":      return handleSessionKilled(msg);
-    case "key_status":          return handleKeyStatus(msg);
-    case "sync_status":         return handleSyncStatus(msg);
+    case "init":              return handleInit(msg);
+    case "session_started":   return handleSessionStarted(msg);
+    case "turn_update":       return handleTurnUpdate(msg);
+    case "tool_call":         return handleToolCall(msg);
+    case "tool_result":       return handleToolResult(msg);
+    case "approval_required": return handleApprovalRequired(msg);
+    case "session_complete":  return handleSessionComplete(msg);
+    case "session_errored":   return handleSessionErrored(msg);
+    case "session_killed":    return handleSessionKilled(msg);
+    case "key_status":        return handleKeyStatus(msg);
+    case "sync_status":       return handleSyncStatus(msg);
+    case "session_resumed":    return handleSessionResumed(msg);
+    case "injection_failed":   return handleInjectionFailed(msg);
   }
 }

@@ -16,6 +16,7 @@ type State = {
   keyStatus: KeyStatus;
   syncStatus: SyncStatus | null;
   wsStatus: WsStatus;
+  injectionError: string | null;
 };
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -31,6 +32,7 @@ type Actions = {
   setKeyStatus: (status: KeyStatus) => void;
   setSyncStatus: (status: SyncStatus) => void;
   setWsStatus: (status: WsStatus) => void;
+  setInjectionError: (error: string | null) => void;
   initFromServer: (msg: WsInitMessage) => void;
   sendApprovalResponse: (sessionId: string, toolCallId: string, approved: boolean) => void;
   sendKill: (sessionId: string) => void;
@@ -79,6 +81,7 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
   keyStatus: "unknown",
   syncStatus: null,
   wsStatus: "connecting",
+  injectionError: null,
 
   upsertSession: (session) =>
     set((state) => ({
@@ -134,6 +137,8 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
   setSyncStatus: (status) => set({ syncStatus: status }),
 
   setWsStatus: (status) => set({ wsStatus: status }),
+
+  setInjectionError: (error) => set({ injectionError: error }),
 
   initFromServer: (msg) => {
     const turns: Record<string, Turn[]> = {};
