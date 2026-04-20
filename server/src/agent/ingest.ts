@@ -24,6 +24,7 @@ export function processAgentEvent(
           id: msg.session_id,
           sdk_session_id: null,
           abortController: new AbortController(),
+          promptQueue: null,
           prompt: msg.prompt,
           cwd: msg.cwd,
           status: "running",
