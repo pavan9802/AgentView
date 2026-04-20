@@ -1,6 +1,7 @@
 import { query as realQuery } from "@anthropic-ai/claude-agent-sdk";
 import { mockQuery } from "./mockQuery";
 import { pendingApprovals, sessions } from "../state";
+import { PromptQueue } from "./promptQueue";
 import { handleTurnUsage, type LoopState } from "./handlers/turnUsage";
 import { makePreToolUseHook } from "./hooks/preToolUse";
 import { makePostToolUseHook } from "./hooks/postToolUse";
@@ -14,6 +15,18 @@ import { send } from "../ws/send";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const query = process.env["ANTHROPIC_API_KEY"] === "mock" ? (mockQuery as any as typeof realQuery) : realQuery;
 
+function extractAssistantText(message: unknown): string | null {
+  if (typeof message !== "object" || message === null || !("role" in message)) return null;
+  const msg = message as { role: unknown; content?: unknown };
+  if (msg.role !== "assistant" || !Array.isArray(msg.content)) return null;
+  const texts = (msg.content as unknown[])
+    .filter((b): b is { type: string; text: string } =>
+      typeof b === "object" && b !== null && (b as Record<string, unknown>)["type"] === "text"
+    )
+    .map((b) => b.text);
+  return texts.length > 0 ? texts.join("\n") : null;
+}
+
 export async function runAgentSession(sessionId: string, prompt?: string): Promise<void> {
   const session = sessions.get(sessionId);
   if (!session) return;
@@ -23,6 +36,13 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
 
   session.status = "running";
   session.completed_at = null;
+  session.error_type = null;
+  session.error_message = null;
+  session.kill_reason = null;
+  if (isResume) {
+    session.abortController = new AbortController();
+    session.result_text = null;
+  }
   if (!isResume) session.started_at = Date.now();
 
   console.log(`\n[session:${sessionId}] ${isResume ? "resumed" : "started"} — prompt: "${turnPrompt}"`);
@@ -35,8 +55,11 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
     resultText: "",
   };
 
+  const queue = new PromptQueue();
+  session.promptQueue = queue;
+
   try {
-    for await (const message of query({
+    const q = query({
       prompt: turnPrompt,
       options: {
         cwd: session.cwd,
@@ -54,23 +77,20 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
         canUseTool: makeCanUseTool(session, sessionId),
         ...(isResume ? { resume: session.sdk_session_id! } : {}),
       },
-    })) {
+    });
+
+    q.streamInput(queue).catch((err) => {
+      const error = err instanceof Error ? err.message : String(err);
+      console.error(`[session:${sessionId}] streamInput error`, err);
+      send({ type: "injection_failed", session_id: sessionId, error });
+    });
+
+    for await (const message of q) {
       handleTurnUsage(message, session, sessionId, loopState);
 
       // Track the last assistant text for the Stop hook to include in session_complete.
-      if (
-        typeof message === "object" && message !== null &&
-        "role" in message && (message as { role: unknown }).role === "assistant" &&
-        "content" in message && Array.isArray((message as { content: unknown }).content)
-      ) {
-        const content = (message as unknown as { content: unknown[] }).content;
-        const texts = content
-          .filter((b): b is { type: string; text: string } =>
-            typeof b === "object" && b !== null && "type" in b && (b as { type: unknown }).type === "text"
-          )
-          .map((b) => b.text);
-        if (texts.length > 0) loopState.resultText = texts.join("\n");
-      }
+      const text = extractAssistantText(message);
+      if (text) loopState.resultText = text;
 
       // Log every message for observability during development
       console.log(`[session:${sessionId}]`, JSON.stringify(message));
@@ -100,5 +120,8 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
       send({ type: "session_errored", session_id: sessionId, error_type: "api_unavailable", error_message: message });
       console.error(`[session:${sessionId}] error`, err);
     }
+  } finally {
+    queue.close();
+    session.promptQueue = null;
   }
 }

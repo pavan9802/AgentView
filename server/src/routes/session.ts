@@ -2,23 +2,25 @@ import type { StartSessionRequest, StartSessionResponse, AddTurnRequest, AddTurn
 import { sessions, sessionToPublic } from "../state";
 import { runAgentSession } from "../agent/runner";
 import { send } from "../ws/send";
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+
+function jsonError(message: string, code: string, status: number): Response {
+  return new Response(JSON.stringify({ error: message, code }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
 export async function handlePostSession(req: Request): Promise<Response> {
   let body: StartSessionRequest;
   try {
     body = (await req.json()) as StartSessionRequest;
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body", code: "invalid_request" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("Invalid JSON body", "invalid_request", 400);
   }
 
   if (!body.prompt?.trim()) {
-    return new Response(JSON.stringify({ error: "prompt is required", code: "invalid_request" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("prompt is required", "invalid_request", 400);
   }
 
   const id = crypto.randomUUID();
@@ -28,6 +30,7 @@ export async function handlePostSession(req: Request): Promise<Response> {
     id,
     sdk_session_id: null, // populated when the SDK emits its system:init message
     abortController: new AbortController(),
+    promptQueue: null, // set by runner once query() starts
     prompt: body.prompt.trim(),
     cwd,
     status: "running",
@@ -61,44 +64,43 @@ export async function handlePostTurn(req: Request, sessionId: string): Promise<R
   const session = sessions.get(sessionId);
 
   if (!session) {
-    return new Response(JSON.stringify({ error: "Session not found", code: "not_found" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  if (session.status !== "complete") {
-    return new Response(JSON.stringify({ error: "Session is not complete", code: "invalid_state" }), {
-      status: 409,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  if (!session.sdk_session_id) {
-    return new Response(JSON.stringify({ error: "Session cannot be resumed", code: "not_resumable" }), {
-      status: 409,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("Session not found", "not_found", 404);
   }
 
   let body: AddTurnRequest;
   try {
     body = (await req.json()) as AddTurnRequest;
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body", code: "invalid_request" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("Invalid JSON body", "invalid_request", 400);
   }
 
   if (!body.prompt?.trim()) {
-    return new Response(JSON.stringify({ error: "prompt is required", code: "invalid_request" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("prompt is required", "invalid_request", 400);
   }
 
-  void runAgentSession(sessionId, body.prompt.trim());
+  const prompt = body.prompt.trim();
+
+  if (session.status === "running") {
+    // Live injection — push into the queue attached to the running query via streamInput
+    if (!session.promptQueue || !session.sdk_session_id) {
+      return jsonError("Session is not ready for injection", "invalid_state", 409);
+    }
+    const msg: SDKUserMessage = {
+      type: "user",
+      message: { role: "user", content: prompt },
+      parent_tool_use_id: null,
+      session_id: session.sdk_session_id,
+      priority: "next",
+    };
+    session.promptQueue.push(msg);
+  } else {
+    // Resume — session is complete, errored, or killed
+    if (!session.sdk_session_id) {
+      return jsonError("Session cannot be resumed", "not_resumable", 409);
+    }
+    void runAgentSession(sessionId, prompt);
+    send({ type: "session_resumed", session: sessionToPublic(session) });
+  }
 
   const response: AddTurnResponse = { ok: true };
   return new Response(JSON.stringify(response), {

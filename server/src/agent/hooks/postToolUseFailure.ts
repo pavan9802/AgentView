@@ -1,8 +1,8 @@
 import type { HookCallbackMatcher, PostToolUseFailureHookInput } from "@anthropic-ai/claude-agent-sdk";
-import type { ToolCall } from "@agentview/shared";
 import type { LoopState } from "../handlers/turnUsage";
 import type { SessionState } from "../../state";
 import { send } from "../../ws/send";
+import { buildToolCall } from "./toolCallHelpers";
 
 export function makePostToolUseFailureHook(
   session: SessionState,
@@ -13,27 +13,8 @@ export function makePostToolUseFailureHook(
     hooks: [
       async (input) => {
         const msg = input as PostToolUseFailureHookInput;
-
-        const duration_ms = Date.now() - (loopState.toolTimestamps.get(msg.tool_use_id) ?? Date.now());
-        loopState.toolTimestamps.delete(msg.tool_use_id);
-
-        const wasApprovalRequired = session.approvalRequiredTools.has(msg.tool_name);
-        const approved = wasApprovalRequired
-          ? (session.approvedToolUseIds.has(msg.tool_use_id) ? true : false)
-          : null;
-        if (wasApprovalRequired) session.approvedToolUseIds.delete(msg.tool_use_id);
-
-        const toolCall: ToolCall = {
-          id: msg.tool_use_id,
-          session_id: sessionId,
-          turn_id: loopState.currentTurnId,
-          tool_name: msg.tool_name,
-          tool_input: JSON.stringify(msg.tool_input),
-          duration_ms,
-          approved,
-          error: typeof msg.error === "string" ? msg.error : JSON.stringify(msg.error),
-          created_at: Date.now(),
-        };
+        const error = typeof msg.error === "string" ? msg.error : JSON.stringify(msg.error);
+        const toolCall = buildToolCall(msg, session, sessionId, loopState, error);
 
         send({ type: "tool_call", session_id: sessionId, tool_call: toolCall });
 

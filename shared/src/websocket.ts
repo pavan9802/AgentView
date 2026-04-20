@@ -82,6 +82,17 @@ export type WsSyncStatusMessage = {
   status: SyncStatus;
 };
 
+export type WsSessionResumedMessage = {
+  type: "session_resumed";
+  session: Session;
+};
+
+export type WsInjectionFailedMessage = {
+  type: "injection_failed";
+  session_id: string;
+  error: string;
+};
+
 export type WsServerToClient =
   | WsInitMessage
   | WsSessionStartedMessage
@@ -93,7 +104,9 @@ export type WsServerToClient =
   | WsSessionErroredMessage
   | WsSessionKilledMessage
   | WsKeyStatusMessage
-  | WsSyncStatusMessage;
+  | WsSyncStatusMessage
+  | WsSessionResumedMessage
+  | WsInjectionFailedMessage;
 
 // ── Client → Server ──────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage, WsSessionCompleteMessage, WsSessionErroredMessage, WsSessionKilledMessage, WsKeyStatusMessage, WsSyncStatusMessage } from "@agentview/shared";
+import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage, WsSessionCompleteMessage, WsSessionErroredMessage, WsSessionKilledMessage, WsKeyStatusMessage, WsSyncStatusMessage, WsSessionResumedMessage, WsInjectionFailedMessage } from "@agentview/shared";
 import { useAgentView, cancelKillTimer } from "../store";
 
 // ── Handler 1: init ───────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ function handleToolCall(msg: WsToolCallMessage): void {
   removePendingApproval(msg.session_id, msg.tool_call.id);
 }
 
-// ── Handler 7: session_complete ───────────────────────────────────────────────
+// ── Handler 5: session_complete ───────────────────────────────────────────────
 
 function handleSessionComplete(msg: WsSessionCompleteMessage): void {
   const { sessions, upsertSession } = useAgentView.getState();
@@ -52,19 +52,19 @@ function handleSessionComplete(msg: WsSessionCompleteMessage): void {
   }
 }
 
-// ── Handler 10: key_status ────────────────────────────────────────────────────
+// ── Handler 6: key_status ─────────────────────────────────────────────────────
 
 function handleKeyStatus(msg: WsKeyStatusMessage): void {
   useAgentView.getState().setKeyStatus(msg.status);
 }
 
-// ── Handler 11: sync_status ───────────────────────────────────────────────────
+// ── Handler 7: sync_status ────────────────────────────────────────────────────
 
 function handleSyncStatus(msg: WsSyncStatusMessage): void {
   useAgentView.getState().setSyncStatus(msg.status);
 }
 
-// ── Handler 9: session_killed ─────────────────────────────────────────────────
+// ── Handler 8: session_killed ─────────────────────────────────────────────────
 
 function handleSessionKilled(msg: WsSessionKilledMessage): void {
   cancelKillTimer(msg.session_id);
@@ -76,7 +76,7 @@ function handleSessionKilled(msg: WsSessionKilledMessage): void {
   clearPendingApprovalsForSession(msg.session_id);
 }
 
-// ── Handler 8: session_errored ────────────────────────────────────────────────
+// ── Handler 9: session_errored ────────────────────────────────────────────────
 
 function handleSessionErrored(msg: WsSessionErroredMessage): void {
   const { sessions, upsertSession, clearPendingApprovalsForSession } = useAgentView.getState();
@@ -87,7 +87,7 @@ function handleSessionErrored(msg: WsSessionErroredMessage): void {
   clearPendingApprovalsForSession(msg.session_id);
 }
 
-// ── Handler 6: approval_required ─────────────────────────────────────────────
+// ── Handler 10: approval_required ────────────────────────────────────────────
 
 function handleApprovalRequired(msg: WsApprovalRequiredMessage): void {
   useAgentView.getState().addPendingApproval({
@@ -98,26 +98,47 @@ function handleApprovalRequired(msg: WsApprovalRequiredMessage): void {
   });
 }
 
-// ── Handler 5: tool_result ────────────────────────────────────────────────────
+// ── Handler 11: tool_result ───────────────────────────────────────────────────
 
 function handleToolResult(msg: WsToolResultMessage): void {
   console.log("[tool_result]", msg.session_id, msg.output);
+}
+
+// ── Handler 12: session_resumed ──────────────────────────────────────────────
+
+function handleSessionResumed(msg: WsSessionResumedMessage): void {
+  useAgentView.getState().upsertSession(msg.session);
+}
+
+// ── Handler 13: injection_failed ─────────────────────────────────────────────
+
+let injectionDismissTimer: ReturnType<typeof setTimeout> | null = null;
+
+function handleInjectionFailed(msg: WsInjectionFailedMessage): void {
+  if (injectionDismissTimer !== null) clearTimeout(injectionDismissTimer);
+  useAgentView.getState().setInjectionError(msg.error);
+  injectionDismissTimer = setTimeout(() => {
+    useAgentView.getState().setInjectionError(null);
+    injectionDismissTimer = null;
+  }, 5000);
 }
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 
 export function handleMessage(msg: WsServerToClient): void {
   switch (msg.type) {
-    case "init":             return handleInit(msg);
-    case "session_started":  return handleSessionStarted(msg);
-    case "turn_update":      return handleTurnUpdate(msg);
-    case "tool_call":        return handleToolCall(msg);
-    case "tool_result":        return handleToolResult(msg);
-    case "approval_required":   return handleApprovalRequired(msg);
-    case "session_complete":    return handleSessionComplete(msg);
-    case "session_errored":     return handleSessionErrored(msg);
-    case "session_killed":      return handleSessionKilled(msg);
-    case "key_status":          return handleKeyStatus(msg);
-    case "sync_status":         return handleSyncStatus(msg);
+    case "init":              return handleInit(msg);
+    case "session_started":   return handleSessionStarted(msg);
+    case "turn_update":       return handleTurnUpdate(msg);
+    case "tool_call":         return handleToolCall(msg);
+    case "tool_result":       return handleToolResult(msg);
+    case "approval_required": return handleApprovalRequired(msg);
+    case "session_complete":  return handleSessionComplete(msg);
+    case "session_errored":   return handleSessionErrored(msg);
+    case "session_killed":    return handleSessionKilled(msg);
+    case "key_status":        return handleKeyStatus(msg);
+    case "sync_status":       return handleSyncStatus(msg);
+    case "session_resumed":    return handleSessionResumed(msg);
+    case "injection_failed":   return handleInjectionFailed(msg);
   }
 }

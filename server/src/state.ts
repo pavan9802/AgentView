@@ -1,9 +1,11 @@
 import type { ErrorReason, KillReason, Session, SessionStatus } from "@agentview/shared";
+import type { PromptQueue } from "./agent/promptQueue";
 
 export type SessionState = {
   id: string;                    // our internal UUID (used as the primary key everywhere)
   sdk_session_id: string | null; // SDK-assigned session ID — needed to resume via query({ options: { resume } })
   abortController: AbortController;
+  promptQueue: PromptQueue | null; // non-null only while query() is iterating; used for live injection via streamInput
   prompt: string;
   cwd: string;
   status: SessionStatus;

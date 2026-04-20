@@ -1,9 +1,10 @@
 import { useState, useCallback } from "react";
-import type { StartSessionResponse } from "@agentview/shared";
+import type { StartSessionResponse, AddTurnResponse } from "@agentview/shared";
 import { sessionsApi } from "../api/sessions";
 
 export type UseSessionsReturn = {
   startSession: (prompt: string) => Promise<StartSessionResponse>;
+  addTurn: (sessionId: string, prompt: string) => Promise<AddTurnResponse>;
   isStarting: boolean;
   startError: string | null;
 };
@@ -26,5 +27,19 @@ export function useSessions(): UseSessionsReturn {
     }
   }, []);
 
-  return { startSession, isStarting, startError };
+  const addTurn = useCallback(async (sessionId: string, prompt: string): Promise<AddTurnResponse> => {
+    setIsStarting(true);
+    setStartError(null);
+    try {
+      return await sessionsApi.addTurn(sessionId, prompt);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to send prompt";
+      setStartError(msg);
+      throw err;
+    } finally {
+      setIsStarting(false);
+    }
+  }, []);
+
+  return { startSession, addTurn, isStarting, startError };
 }
