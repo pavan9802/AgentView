@@ -1,7 +1,22 @@
 import { useMemo } from "react";
-import { BUDGET } from "../../lib/constants";
+import { BUDGET, SLOW_TURN_MS, BUDGET_WARN_PCT, CTX_WARN_PCT } from "../../lib/constants";
 import { useAgentView } from "../../store";
 import { selectSelectedSession, selectBudgetPct, selectTotalCost, selectCtxPct, selectLatencyPoints, selectPendingForSession } from "../../store/selectors";
+import type { PendingApproval } from "@agentview/shared";
+
+function getPendingMessage(pending: PendingApproval[]): string {
+  if (pending.length !== 1) return ` — ${pending.length} tool calls waiting for review`;
+  const p = pending[0];
+  if (!p) return " — tool call waiting for review";
+  if (p.tool_name === "bash") {
+    try {
+      const input = JSON.parse(p.tool_input) as Record<string, unknown>;
+      const cmd = typeof input["command"] === "string" ? input["command"] : null;
+      if (cmd) return ` — ${cmd.length > 60 ? cmd.slice(0, 60) + "…" : cmd}`;
+    } catch { /* fall through */ }
+  }
+  return ` — ${p.tool_name} waiting for review`;
+}
 
 function AlertsTab() {
   const activeId = useAgentView((s) => s.activeId);
@@ -17,9 +32,10 @@ function AlertsTab() {
 
   if (!selectedSession) return null;
 
-  const hasSlowTurns = latencyPoints.some((t) => t.latency > 3000);
-  const slowTurnCount = latencyPoints.filter((t) => t.latency > 3000).length;
-  const noAlerts = pending.length === 0 && budgetPct <= 70 && ctxPct <= 60 && !hasSlowTurns;
+  const slowTurns = latencyPoints.filter((t) => t.latency > SLOW_TURN_MS);
+  const hasSlowTurns = slowTurns.length > 0;
+  const slowTurnCount = slowTurns.length;
+  const noAlerts = pending.length === 0 && budgetPct <= BUDGET_WARN_PCT && ctxPct <= CTX_WARN_PCT && !hasSlowTurns;
 
   return (
     <>
@@ -28,24 +44,11 @@ function AlertsTab() {
           <span className="aicon">⚠</span>
           <div className="abody">
             <strong>Approval pending</strong>
-            {pending.length === 1
-              ? (() => {
-                  const p = pending[0];
-                  if (!p) return " — tool call waiting for review";
-                  if (p.tool_name === "bash") {
-                    try {
-                      const input = JSON.parse(p.tool_input) as Record<string, unknown>;
-                      const cmd = typeof input["command"] === "string" ? input["command"] : null;
-                      if (cmd) return ` — ${cmd.length > 60 ? cmd.slice(0, 60) + "…" : cmd}`;
-                    } catch { /* fall through */ }
-                  }
-                  return ` — ${p.tool_name} waiting for review`;
-                })()
-              : ` — ${pending.length} tool calls waiting for review`}
+            {getPendingMessage(pending)}
           </div>
         </div>
       )}
-      {budgetPct > 70 && (
+      {budgetPct > BUDGET_WARN_PCT && (
         <div className="alert alert-warn">
           <span className="aicon">⚠</span>
           <div className="abody">
@@ -53,7 +56,7 @@ function AlertsTab() {
           </div>
         </div>
       )}
-      {ctxPct > 60 && (
+      {ctxPct > CTX_WARN_PCT && (
         <div className="alert alert-warn">
           <span className="aicon">⚠</span>
           <div className="abody">

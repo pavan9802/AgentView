@@ -1,6 +1,13 @@
-import type { Turn } from "@agentview/shared";
+import type { Turn, KillReason } from "@agentview/shared";
 import type { SessionState } from "../../state";
 import { send } from "../../ws/send";
+
+function killSession(session: SessionState, sessionId: string, reason: KillReason): void {
+  session.status = "killed";
+  session.kill_reason = reason;
+  session.abortController.abort();
+  send({ type: "session_killed", session_id: sessionId, reason });
+}
 
 // Haiku 4.5 pricing (per token)
 const COST_PER_INPUT_TOKEN = 1e-6;   // $1 / 1M
@@ -61,19 +68,13 @@ export function handleTurnUsage(
 
   const budgetUsd = parseFloat(process.env["BUDGET_USD"] ?? "0.5");
   if (session.total_cost_usd > budgetUsd) {
-    session.status = "killed";
-    session.kill_reason = "budget_exceeded";
-    session.abortController.abort();
-    send({ type: "session_killed", session_id: sessionId, reason: "budget_exceeded" });
+    killSession(session, sessionId, "budget_exceeded");
     return;
   }
 
   const maxTurns = parseInt(process.env["MAX_TURNS"] ?? "50", 10);
   if (loopState.turnNumber > maxTurns) {
-    session.status = "killed";
-    session.kill_reason = "max_turns_exceeded";
-    session.abortController.abort();
-    send({ type: "session_killed", session_id: sessionId, reason: "max_turns_exceeded" });
+    killSession(session, sessionId, "max_turns_exceeded");
     return;
   }
 

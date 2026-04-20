@@ -4,22 +4,23 @@ import { runAgentSession } from "../agent/runner";
 import { send } from "../ws/send";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
+function jsonError(message: string, code: string, status: number): Response {
+  return new Response(JSON.stringify({ error: message, code }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 export async function handlePostSession(req: Request): Promise<Response> {
   let body: StartSessionRequest;
   try {
     body = (await req.json()) as StartSessionRequest;
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body", code: "invalid_request" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("Invalid JSON body", "invalid_request", 400);
   }
 
   if (!body.prompt?.trim()) {
-    return new Response(JSON.stringify({ error: "prompt is required", code: "invalid_request" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("prompt is required", "invalid_request", 400);
   }
 
   const id = crypto.randomUUID();
@@ -63,27 +64,18 @@ export async function handlePostTurn(req: Request, sessionId: string): Promise<R
   const session = sessions.get(sessionId);
 
   if (!session) {
-    return new Response(JSON.stringify({ error: "Session not found", code: "not_found" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("Session not found", "not_found", 404);
   }
 
   let body: AddTurnRequest;
   try {
     body = (await req.json()) as AddTurnRequest;
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body", code: "invalid_request" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("Invalid JSON body", "invalid_request", 400);
   }
 
   if (!body.prompt?.trim()) {
-    return new Response(JSON.stringify({ error: "prompt is required", code: "invalid_request" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError("prompt is required", "invalid_request", 400);
   }
 
   const prompt = body.prompt.trim();
@@ -91,10 +83,7 @@ export async function handlePostTurn(req: Request, sessionId: string): Promise<R
   if (session.status === "running") {
     // Live injection — push into the queue attached to the running query via streamInput
     if (!session.promptQueue || !session.sdk_session_id) {
-      return new Response(JSON.stringify({ error: "Session is not ready for injection", code: "invalid_state" }), {
-        status: 409,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonError("Session is not ready for injection", "invalid_state", 409);
     }
     const msg: SDKUserMessage = {
       type: "user",
@@ -107,10 +96,7 @@ export async function handlePostTurn(req: Request, sessionId: string): Promise<R
   } else {
     // Resume — session is complete, errored, or killed
     if (!session.sdk_session_id) {
-      return new Response(JSON.stringify({ error: "Session cannot be resumed", code: "not_resumable" }), {
-        status: 409,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonError("Session cannot be resumed", "not_resumable", 409);
     }
     void runAgentSession(sessionId, prompt);
     send({ type: "session_resumed", session: sessionToPublic(session) });
