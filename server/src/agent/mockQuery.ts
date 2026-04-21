@@ -91,7 +91,25 @@ async function runMockTool(
   });
 }
 
-export async function* mockQuery(params: {
+type MockQueryResult = AsyncIterable<unknown> & {
+  streamInput: (queue: AsyncIterable<unknown>) => Promise<void>;
+};
+
+export function mockQuery(params: {
+  prompt: string;
+  options: MockQueryOptions;
+}): MockQueryResult {
+  const gen = mockQueryGen(params);
+  return {
+    [Symbol.asyncIterator]() {
+      return gen;
+    },
+    // No-op: the mock scenario is fixed, injected prompts are silently ignored.
+    async streamInput(_queue: AsyncIterable<unknown>): Promise<void> {},
+  };
+}
+
+async function* mockQueryGen(params: {
   prompt: string;
   options: MockQueryOptions;
 }): AsyncGenerator<unknown> {
