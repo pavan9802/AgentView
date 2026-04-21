@@ -1,12 +1,9 @@
 import { handlePostSession, handlePostTurn } from "./routes/session";
+import { handlePostIngest } from "./routes/ingest";
 import { handleWsOpen, handleWsMessage, handleWsClose } from "./ws/handler";
+import { handleAgentWsOpen, handleAgentWsMessage, handleAgentWsClose } from "./ws/agentHandler";
 import { pendingApprovals, sessions } from "./state";
 import { send } from "./ws/send";
-
-if (!process.env["ANTHROPIC_API_KEY"]) {
-  console.error("Error: ANTHROPIC_API_KEY is not set. Add it to .env and restart.");
-  process.exit(1);
-}
 
 const PORT = Number(process.env["PORT"] ?? 3000);
 
@@ -17,11 +14,23 @@ const server = Bun.serve({
     const url = new URL(req.url);
 
     if (url.pathname === "/ws") {
-      const upgraded = server.upgrade(req);
+      const upgraded = server.upgrade(req, { data: { role: "dashboard" } });
       if (!upgraded) {
         return new Response("WebSocket upgrade failed", { status: 426 });
       }
       return undefined as unknown as Response;
+    }
+
+    if (url.pathname === "/agent-ws") {
+      const upgraded = server.upgrade(req, { data: { role: "agent" } });
+      if (!upgraded) {
+        return new Response("WebSocket upgrade failed", { status: 426 });
+      }
+      return undefined as unknown as Response;
+    }
+
+    if (req.method === "POST" && url.pathname === "/ingest") {
+      return handlePostIngest(req);
     }
 
     if (req.method === "POST" && url.pathname === "/session") {
@@ -40,9 +49,18 @@ const server = Bun.serve({
   },
 
   websocket: {
-    open: handleWsOpen,
-    message: handleWsMessage,
-    close: handleWsClose,
+    open(ws) {
+      if (ws.data.role === "agent") handleAgentWsOpen(ws);
+      else handleWsOpen(ws);
+    },
+    message(ws, data) {
+      if (ws.data.role === "agent") handleAgentWsMessage(ws, data);
+      else handleWsMessage(ws, data);
+    },
+    close(ws) {
+      if (ws.data.role === "agent") handleAgentWsClose(ws);
+      else handleWsClose(ws);
+    },
   },
 });
 

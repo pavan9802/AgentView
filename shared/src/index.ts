@@ -25,12 +25,31 @@ export type {
   WsSyncStatusMessage,
   WsSessionResumedMessage,
   WsInjectionFailedMessage,
+  WsUserPromptMessage,
+  WsAssistantMessageMessage,
   WsServerToClient,
   WsApprovalResponseMessage,
   WsKillSessionMessage,
   WsSetApprovalConfigMessage,
   WsClientToServer,
 } from "./websocket";
+
+export type {
+  AgentSessionStartedMessage,
+  AgentTurnUpdateMessage,
+  AgentToolCallMessage,
+  AgentToolResultMessage,
+  AgentApprovalRequiredMessage,
+  AgentSessionCompleteMessage,
+  AgentSessionErroredMessage,
+  AgentSessionKilledMessage,
+  AgentUserPromptMessage,
+  AgentAssistantMessageMessage,
+  AgentToServer,
+  ServerApprovalResponseMessage,
+  ServerKillMessage,
+  ServerToAgent,
+} from "./ingest";
 
 export type {
   StartSessionRequest,

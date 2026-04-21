@@ -33,6 +33,9 @@ export function setClient(ws: BunServerWebSocket | null): void {
   client = ws;
 }
 
+/** External agent WebSocket connections keyed by session_id. */
+export const agentConnections = new Map<string, BunServerWebSocket>();
+
 /** Pending approval callbacks keyed by tool_use_id. */
 export const pendingApprovals = new Map<string, (approved: boolean) => void>();
 

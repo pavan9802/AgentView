@@ -93,6 +93,22 @@ export type WsInjectionFailedMessage = {
   error: string;
 };
 
+export type WsUserPromptMessage = {
+  type: "user_prompt";
+  session_id: string;
+  id: string;
+  prompt: string;
+  created_at: number;
+};
+
+export type WsAssistantMessageMessage = {
+  type: "assistant_message";
+  session_id: string;
+  id: string;
+  text: string;
+  created_at: number;
+};
+
 export type WsServerToClient =
   | WsInitMessage
   | WsSessionStartedMessage
@@ -106,7 +122,9 @@ export type WsServerToClient =
   | WsKeyStatusMessage
   | WsSyncStatusMessage
   | WsSessionResumedMessage
-  | WsInjectionFailedMessage;
+  | WsInjectionFailedMessage
+  | WsUserPromptMessage
+  | WsAssistantMessageMessage;
 
 // ── Client → Server ──────────────────────────────────────────────────────────
 

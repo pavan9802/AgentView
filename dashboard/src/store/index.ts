@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Session, Turn, ToolCall, KeyStatus } from "../lib/types";
+import type { Session, Turn, ToolCall, KeyStatus, PromptFeedItem, AssistantFeedItem } from "../lib/types";
 import type { PendingApproval, SyncStatus, WsInitMessage } from "@agentview/shared";
 import { wsClient } from "../ws/client";
 
@@ -9,8 +9,10 @@ type WsStatus = "connecting" | "connected" | "disconnected";
 
 type State = {
   sessions: Record<string, Session>;
-  turns: Record<string, Turn[]>;            // keyed by session_id, sorted by created_at asc
-  toolCalls: Record<string, ToolCall[]>;    // keyed by session_id, sorted by created_at asc
+  turns: Record<string, Turn[]>;                   // keyed by session_id, sorted by created_at asc
+  toolCalls: Record<string, ToolCall[]>;           // keyed by session_id, sorted by created_at asc
+  prompts: Record<string, PromptFeedItem[]>;       // keyed by session_id, sorted by created_at asc
+  assistantMessages: Record<string, AssistantFeedItem[]>; // keyed by session_id, sorted by created_at asc
   pendingApprovals: Record<string, PendingApproval[]>; // keyed by session_id
   activeId: string | null;
   keyStatus: KeyStatus;
@@ -25,6 +27,8 @@ type Actions = {
   upsertSession: (session: Session) => void;
   upsertTurn: (turn: Turn) => void;
   upsertToolCall: (tc: ToolCall) => void;
+  addPrompt: (item: PromptFeedItem) => void;
+  addAssistantMessage: (item: AssistantFeedItem) => void;
   addPendingApproval: (approval: PendingApproval) => void;
   removePendingApproval: (sessionId: string, toolCallId: string) => void;
   clearPendingApprovalsForSession: (sessionId: string) => void;
@@ -76,6 +80,8 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
   sessions: {},
   turns: {},
   toolCalls: {},
+  prompts: {},
+  assistantMessages: {},
   pendingApprovals: {},
   activeId: null,
   keyStatus: "unknown",
@@ -101,6 +107,22 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
       toolCalls: {
         ...state.toolCalls,
         [tc.session_id]: upsertIntoArray(state.toolCalls[tc.session_id] ?? [], tc),
+      },
+    })),
+
+  addPrompt: (item) =>
+    set((state) => ({
+      prompts: {
+        ...state.prompts,
+        [item.session_id]: [...(state.prompts[item.session_id] ?? []), item],
+      },
+    })),
+
+  addAssistantMessage: (item) =>
+    set((state) => ({
+      assistantMessages: {
+        ...state.assistantMessages,
+        [item.session_id]: [...(state.assistantMessages[item.session_id] ?? []), item],
       },
     })),
 
@@ -141,7 +163,12 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
   setInjectionError: (error) => set({ injectionError: error }),
 
   initFromServer: (msg) => {
-    const turns: Record<string, Turn[]> = {};
+    const current = get();
+
+    // The server has no DB yet so always sends turns: [] and tool_calls: [].
+    // On reconnect the client's in-memory data is the only source of truth —
+    // start from it and let the server's session snapshot update status/cost.
+    const turns: Record<string, Turn[]> = { ...current.turns };
     for (const turn of msg.turns) {
       (turns[turn.session_id] ??= []).push(turn);
     }
@@ -149,7 +176,7 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
       arr.sort((a, b) => a.created_at - b.created_at);
     }
 
-    const toolCalls: Record<string, ToolCall[]> = {};
+    const toolCalls: Record<string, ToolCall[]> = { ...current.toolCalls };
     for (const tc of msg.tool_calls) {
       (toolCalls[tc.session_id] ??= []).push(tc);
     }
@@ -157,7 +184,9 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
       arr.sort((a, b) => a.created_at - b.created_at);
     }
 
-    const sessions: Record<string, Session> = {};
+    // Merge sessions: server snapshot is authoritative for status/cost fields,
+    // but don't discard sessions the client already has (they may be mid-flight).
+    const sessions: Record<string, Session> = { ...current.sessions };
     for (const s of msg.sessions) {
       sessions[s.id] = s;
     }
@@ -167,11 +196,12 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
       {},
     );
 
-    // Reset activeId if the selected session is no longer in the snapshot
+    // Reset activeId if the selected session is no longer in the snapshot.
+    // If nothing was selected, auto-select the most recently created session.
     const currentActiveId = get().activeId;
     const activeId = currentActiveId != null && sessions[currentActiveId] != null
       ? currentActiveId
-      : null;
+      : Object.values(sessions).sort((a, b) => b.created_at - a.created_at)[0]?.id ?? null;
 
     set({ sessions, turns, toolCalls, pendingApprovals, keyStatus: msg.key_status, syncStatus: msg.sync_status, activeId });
   },
@@ -183,7 +213,10 @@ export const useAgentView = create<AgentViewState>((set, get) => ({
 
   sendKill: (sessionId) => {
     const existing = get().sessions[sessionId];
-    if (!existing) return;
+    if (!existing || existing.status !== "running") return;
+    // Cancel any prior kill timer before creating a new one.
+    const prior = killTimers.get(sessionId);
+    if (prior !== undefined) clearTimeout(prior);
     get().upsertSession({ ...existing, status: "killed" });
     wsClient.send({ type: "kill_session", session_id: sessionId });
     const timer = setTimeout(() => {

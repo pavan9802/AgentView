@@ -1,4 +1,4 @@
-import type { Session, Turn, ToolCall } from "../lib/types";
+import type { Session, Turn, ToolCall, PromptFeedItem, AssistantFeedItem } from "../lib/types";
 import type { PendingApproval } from "@agentview/shared";
 import type { FeedItem, TokenPoint, LatencyPoint } from "../lib/types";
 import { BUDGET } from "../lib/constants";
@@ -7,6 +7,8 @@ import type { AgentViewState } from "./index";
 // Stable empty fallbacks so `?? []` never allocates a new array on each call
 const EMPTY_TURNS: Turn[] = [];
 const EMPTY_TOOL_CALLS: ToolCall[] = [];
+const EMPTY_PROMPTS: PromptFeedItem[] = [];
+const EMPTY_ASSISTANT_MESSAGES: AssistantFeedItem[] = [];
 const EMPTY_APPROVALS: PendingApproval[] = [];
 
 // ── Scalar / direct-reference selectors (always stable) ───────────────────────
@@ -67,12 +69,14 @@ export const selectAllSessions: (state: AgentViewState) => Session[] = (() => {
 })();
 
 export const selectFeedItems = (() => {
-  const cache = new Map<string, { turns: Turn[]; toolCalls: ToolCall[]; result: FeedItem[] }>();
+  const cache = new Map<string, { turns: Turn[]; toolCalls: ToolCall[]; prompts: PromptFeedItem[]; assistantMessages: AssistantFeedItem[]; result: FeedItem[] }>();
   return (sessionId: string) => (state: AgentViewState): FeedItem[] => {
     const turns = state.turns[sessionId] ?? EMPTY_TURNS;
     const toolCalls = state.toolCalls[sessionId] ?? EMPTY_TOOL_CALLS;
+    const prompts = state.prompts[sessionId] ?? EMPTY_PROMPTS;
+    const assistantMessages = state.assistantMessages[sessionId] ?? EMPTY_ASSISTANT_MESSAGES;
     const cached = cache.get(sessionId);
-    if (cached && cached.turns === turns && cached.toolCalls === toolCalls) return cached.result;
+    if (cached && cached.turns === turns && cached.toolCalls === toolCalls && cached.prompts === prompts && cached.assistantMessages === assistantMessages) return cached.result;
     const turnItems: FeedItem[] = turns.map((t) => ({
       id: t.id,
       type: "turn" as const,
@@ -87,8 +91,8 @@ export const selectFeedItems = (() => {
       ts: tc.created_at,
       duration: tc.duration_ms,
     }));
-    const result = [...turnItems, ...toolItems].sort((a, b) => a.ts - b.ts);
-    cache.set(sessionId, { turns, toolCalls, result });
+    const result = [...prompts, ...turnItems, ...toolItems, ...assistantMessages].sort((a, b) => a.ts - b.ts);
+    cache.set(sessionId, { turns, toolCalls, prompts, assistantMessages, result });
     return result;
   };
 })();

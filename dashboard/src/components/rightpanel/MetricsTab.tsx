@@ -5,6 +5,17 @@ import { BUDGET, CTX_MAX } from "../../lib/constants";
 import { useAgentView } from "../../store";
 import { selectSelectedSession, selectTokenPoints, selectPendingForSession, selectCtxPct } from "../../store/selectors";
 
+function formatToolInput(toolName: string, toolInput: string): string {
+  try {
+    const input = JSON.parse(toolInput) as Record<string, unknown>;
+    if (toolName.toLowerCase() === "bash") {
+      const cmd = typeof input["command"] === "string" ? input["command"] : null;
+      if (cmd) return cmd;
+    }
+  } catch { /* fall through */ }
+  return toolInput;
+}
+
 function MetricsTab() {
   const activeId = useAgentView((s) => s.activeId);
   const selectedSession = useAgentView(selectSelectedSession);
@@ -15,20 +26,23 @@ function MetricsTab() {
   const pending = useAgentView(pendingSelector);
   const ctxPct = useAgentView(ctxPctSelector);
   const sendApprovalResponse = useAgentView((s) => s.sendApprovalResponse);
+  const wsStatus = useAgentView((s) => s.wsStatus);
 
   if (!selectedSession) return null;
 
   const approval = pending[0] ?? null;
+  const disconnected = wsStatus !== "connected";
 
   return (
     <>
       {approval && (
         <div className="acard">
           <div className="ahdr">⚠ APPROVAL REQUIRED</div>
-          <div className="acmd">$ {approval.tool_input}</div>
+          <div className="acmd">$ {formatToolInput(approval.tool_name, approval.tool_input)}</div>
+          {disconnected && <div className="adisconn">Reconnecting — approval will send when connected</div>}
           <div className="abtns">
-            <button className="btn approve" onClick={() => sendApprovalResponse(selectedSession.id, approval.tool_call_id, true)}>APPROVE</button>
-            <button className="btn reject" onClick={() => sendApprovalResponse(selectedSession.id, approval.tool_call_id, false)}>REJECT</button>
+            <button className="btn approve" disabled={disconnected} onClick={() => sendApprovalResponse(selectedSession.id, approval.tool_call_id, true)}>APPROVE</button>
+            <button className="btn reject" disabled={disconnected} onClick={() => sendApprovalResponse(selectedSession.id, approval.tool_call_id, false)}>REJECT</button>
           </div>
         </div>
       )}
