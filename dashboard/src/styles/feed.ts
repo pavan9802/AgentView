@@ -30,4 +30,10 @@ export const feedStyles = `
   .fdur{color:var(--text-muted);font-size:10px;flex-shrink:0;min-width:44px;text-align:right;}
   .tmark{display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:10px;color:var(--text-muted);margin:2px 0;}
   .tmark::before,.tmark::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* reasoning typewriter */
+  .reasoning-text{color:var(--text-muted);font-style:italic;}
+  .reasoning-cursor{display:inline-block;width:1px;height:10px;background:var(--text-muted);margin-left:1px;vertical-align:middle;animation:blink .8s step-end infinite;}
+  .reasoning-timer{color:var(--text-muted);font-size:10px;flex-shrink:0;min-width:28px;text-align:right;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
 `;

@@ -8,7 +8,7 @@ function getPendingMessage(pending: PendingApproval[]): string {
   if (pending.length !== 1) return ` — ${pending.length} tool calls waiting for review`;
   const p = pending[0];
   if (!p) return " — tool call waiting for review";
-  if (p.tool_name === "bash") {
+  if (p.tool_name.toLowerCase() === "bash") {
     try {
       const input = JSON.parse(p.tool_input) as Record<string, unknown>;
       const cmd = typeof input["command"] === "string" ? input["command"] : null;

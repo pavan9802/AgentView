@@ -1,4 +1,4 @@
-import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage, WsSessionCompleteMessage, WsSessionErroredMessage, WsSessionKilledMessage, WsKeyStatusMessage, WsSyncStatusMessage, WsSessionResumedMessage, WsInjectionFailedMessage } from "@agentview/shared";
+import type { WsServerToClient, WsInitMessage, WsSessionStartedMessage, WsTurnUpdateMessage, WsToolCallMessage, WsToolResultMessage, WsApprovalRequiredMessage, WsSessionCompleteMessage, WsSessionErroredMessage, WsSessionKilledMessage, WsKeyStatusMessage, WsSyncStatusMessage, WsSessionResumedMessage, WsInjectionFailedMessage, WsUserPromptMessage, WsAssistantMessageMessage } from "@agentview/shared";
 import { useAgentView, cancelKillTimer } from "../store";
 
 // ── Handler 1: init ───────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ function handleTurnUpdate(msg: WsTurnUpdateMessage): void {
   upsertTurn(msg.turn);
   const existingSession = sessions[msg.session_id];
   if (existingSession) {
-    upsertSession({ ...existingSession, total_cost_usd: msg.cumulative_cost_usd, total_tokens: msg.cumulative_tokens });
+    upsertSession({ ...existingSession, total_cost_usd: msg.cumulative_cost_usd, total_tokens: msg.cumulative_tokens, total_turns: msg.turn.turn_number });
   }
 }
 
@@ -37,7 +37,7 @@ function handleToolCall(msg: WsToolCallMessage): void {
 // ── Handler 5: session_complete ───────────────────────────────────────────────
 
 function handleSessionComplete(msg: WsSessionCompleteMessage): void {
-  const { sessions, upsertSession } = useAgentView.getState();
+  const { sessions, upsertSession, clearPendingApprovalsForSession } = useAgentView.getState();
   const existing = sessions[msg.session_id];
   if (existing) {
     upsertSession({
@@ -50,6 +50,7 @@ function handleSessionComplete(msg: WsSessionCompleteMessage): void {
       result_text: msg.result_text,
     });
   }
+  clearPendingApprovalsForSession(msg.session_id);
 }
 
 // ── Handler 6: key_status ─────────────────────────────────────────────────────
@@ -90,12 +91,9 @@ function handleSessionErrored(msg: WsSessionErroredMessage): void {
 // ── Handler 10: approval_required ────────────────────────────────────────────
 
 function handleApprovalRequired(msg: WsApprovalRequiredMessage): void {
-  useAgentView.getState().addPendingApproval({
-    session_id: msg.session_id,
-    tool_call_id: msg.tool_call_id,
-    tool_name: msg.tool_name,
-    tool_input: msg.tool_input,
-  });
+  // Auto-approve all tools from Claude Code — sends the response immediately
+  // so the hook's long-poll HTTP request unblocks without user interaction.
+  useAgentView.getState().sendApprovalResponse(msg.session_id, msg.tool_call_id, true);
 }
 
 // ── Handler 11: tool_result ───────────────────────────────────────────────────
@@ -110,7 +108,31 @@ function handleSessionResumed(msg: WsSessionResumedMessage): void {
   useAgentView.getState().upsertSession(msg.session);
 }
 
-// ── Handler 13: injection_failed ─────────────────────────────────────────────
+// ── Handler 13: user_prompt ───────────────────────────────────────────────────
+
+function handleUserPrompt(msg: WsUserPromptMessage): void {
+  const { addPrompt, sessions, upsertSession } = useAgentView.getState();
+  addPrompt({ id: msg.id, session_id: msg.session_id, type: "prompt", prompt: msg.prompt, ts: msg.created_at });
+  // Update session name if it's still the placeholder.
+  const session = sessions[msg.session_id];
+  if (session && session.prompt.startsWith("Claude Code session ")) {
+    upsertSession({ ...session, prompt: msg.prompt });
+  }
+}
+
+// ── Handler 14: assistant_message ────────────────────────────────────────────
+
+function handleAssistantMessage(msg: WsAssistantMessageMessage): void {
+  useAgentView.getState().addAssistantMessage({
+    id: msg.id,
+    session_id: msg.session_id,
+    type: "assistant",
+    text: msg.text,
+    ts: msg.created_at,
+  });
+}
+
+// ── Handler 15: injection_failed ─────────────────────────────────────────────
 
 let injectionDismissTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -138,7 +160,9 @@ export function handleMessage(msg: WsServerToClient): void {
     case "session_killed":    return handleSessionKilled(msg);
     case "key_status":        return handleKeyStatus(msg);
     case "sync_status":       return handleSyncStatus(msg);
-    case "session_resumed":    return handleSessionResumed(msg);
-    case "injection_failed":   return handleInjectionFailed(msg);
+    case "session_resumed":     return handleSessionResumed(msg);
+    case "injection_failed":    return handleInjectionFailed(msg);
+    case "user_prompt":         return handleUserPrompt(msg);
+    case "assistant_message":   return handleAssistantMessage(msg);
   }
 }

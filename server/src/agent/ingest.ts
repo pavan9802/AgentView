@@ -19,7 +19,8 @@ export function processAgentEvent(
     case "session_started": {
       if (agentWs) agentConnections.set(msg.session_id, agentWs);
 
-      if (!sessions.has(msg.session_id)) {
+      const existing = sessions.get(msg.session_id);
+      if (!existing) {
         sessions.set(msg.session_id, {
           id: msg.session_id,
           sdk_session_id: null,
@@ -41,21 +42,30 @@ export function processAgentEvent(
           approvalRequiredTools: new Set(msg.approval_required_tools),
           approvedToolUseIds: new Set(),
         });
+      } else {
+        // Re-registration after a Stop between prompts — mark running again but
+        // preserve accumulated cost/token counts so the dashboard doesn't reset.
+        existing.status = "running";
+        existing.completed_at = null;
+        existing.error_type = null;
+        existing.error_message = null;
+        existing.kill_reason = null;
       }
 
+      const s = sessions.get(msg.session_id)!;
       send({
         type: "session_started",
         session: {
           id: msg.session_id,
-          prompt: msg.prompt,
-          cwd: msg.cwd,
+          prompt: s.prompt,
+          cwd: s.cwd,
           status: "running",
-          created_at: msg.created_at,
-          started_at: msg.created_at,
+          created_at: s.created_at,
+          started_at: s.started_at,
           completed_at: null,
-          total_cost_usd: 0,
-          total_tokens: 0,
-          total_turns: 0,
+          total_cost_usd: s.total_cost_usd,
+          total_tokens: s.total_tokens,
+          total_turns: s.total_turns,
           error_type: null,
           error_message: null,
           kill_reason: null,
@@ -108,16 +118,21 @@ export function processAgentEvent(
         tool_input: msg.tool_input,
       });
 
+      const toolCallId = msg.tool_call_id;
       const promise = new Promise<boolean>((resolve) => {
         if (agentWs) {
           // WS path: callback sends response back to the agent socket.
-          pendingApprovals.set(msg.tool_call_id, (approved) => {
-            agentWs.send(JSON.stringify({ type: "approval_response", tool_call_id: msg.tool_call_id, approved }));
+          pendingApprovals.set(toolCallId, (approved) => {
+            agentWs.send(JSON.stringify({ type: "approval_response", tool_call_id: toolCallId, approved }));
+            pendingApprovalDetails.delete(toolCallId);
             resolve(approved);
           });
         } else {
           // HTTP path: caller awaits this promise and returns it in the response.
-          pendingApprovals.set(msg.tool_call_id, resolve);
+          pendingApprovals.set(toolCallId, (approved) => {
+            pendingApprovalDetails.delete(toolCallId);
+            resolve(approved);
+          });
         }
       });
 
@@ -156,6 +171,21 @@ export function processAgentEvent(
       }
       agentConnections.delete(msg.session_id);
       send({ type: "session_errored", session_id: msg.session_id, error_type: msg.error_type, error_message: msg.error_message });
+      return null;
+    }
+
+    case "user_prompt": {
+      const s = sessions.get(msg.session_id);
+      // Use the first real prompt as the session name if it's still a placeholder.
+      if (s && s.prompt.startsWith("Claude Code session ")) {
+        s.prompt = msg.prompt;
+      }
+      send({ type: "user_prompt", session_id: msg.session_id, id: msg.id, prompt: msg.prompt, created_at: msg.created_at });
+      return null;
+    }
+
+    case "assistant_message": {
+      send({ type: "assistant_message", session_id: msg.session_id, id: msg.id, text: msg.text, created_at: msg.created_at });
       return null;
     }
 

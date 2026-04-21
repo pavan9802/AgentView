@@ -55,10 +55,12 @@ export function handleWsMessage(_ws: BunServerWebSocket, data: string | Uint8Arr
 
       session.status = "killed";
       session.kill_reason = "user_requested";
-      // Drain any pending approval so blocked awaits resolve immediately.
+      // Drain pending approvals for THIS session only so blocked awaits resolve immediately.
       for (const [id, resolve] of pendingApprovals) {
-        resolve(false);
+        if (pendingApprovalDetails.get(id)?.session_id !== msg.session_id) continue;
         pendingApprovals.delete(id);
+        pendingApprovalDetails.delete(id);
+        resolve(false);
       }
       send({ type: "session_killed", session_id: msg.session_id, reason: "user_requested" });
       break;

@@ -1,5 +1,5 @@
 import type { AgentToServer } from "@agentview/shared";
-import { agentConnections, sessions } from "../state";
+import { agentConnections, sessions, pendingApprovals, pendingApprovalDetails } from "../state";
 import { send } from "./send";
 import { processAgentEvent } from "../agent/ingest";
 
@@ -32,6 +32,17 @@ export function handleAgentWsClose(ws: BunServerWebSocket): void {
       s.completed_at = Date.now();
       s.error_type = "api_unavailable";
       s.error_message = "Agent disconnected unexpectedly";
+
+      // Drain any pending approvals for this session so HTTP long-polls don't hang.
+      for (const [id, resolve] of pendingApprovals) {
+        const details = pendingApprovalDetails.get(id);
+        if (details?.session_id === sessionId) {
+          pendingApprovals.delete(id);
+          pendingApprovalDetails.delete(id);
+          resolve(false);
+        }
+      }
+
       send({
         type: "session_errored",
         session_id: sessionId,

@@ -62,6 +62,22 @@ export type AgentSessionKilledMessage = {
   reason: KillReason;
 };
 
+export type AgentUserPromptMessage = {
+  type: "user_prompt";
+  session_id: string;
+  id: string;
+  prompt: string;
+  created_at: number;
+};
+
+export type AgentAssistantMessageMessage = {
+  type: "assistant_message";
+  session_id: string;
+  id: string;
+  text: string;
+  created_at: number;
+};
+
 export type AgentToServer =
   | AgentSessionStartedMessage
   | AgentTurnUpdateMessage
@@ -70,7 +86,9 @@ export type AgentToServer =
   | AgentApprovalRequiredMessage
   | AgentSessionCompleteMessage
   | AgentSessionErroredMessage
-  | AgentSessionKilledMessage;
+  | AgentSessionKilledMessage
+  | AgentUserPromptMessage
+  | AgentAssistantMessageMessage;
 
 // ── Server → Agent (back over /agent-ws WS) ──────────────────────────────
 

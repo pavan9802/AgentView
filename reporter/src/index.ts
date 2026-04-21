@@ -95,17 +95,29 @@ export function createReporter(options: ReporterOptions): Reporter {
     }
   });
 
+  // Drain pending approvals if the WS closes unexpectedly so canUseTool never hangs.
+  ws.onclose = () => {
+    for (const [, resolve] of pendingApprovals) {
+      resolve(false);
+    }
+    pendingApprovals.clear();
+  };
+
   // Register the session as soon as the socket is open.
-  void ready.then(() => {
-    send({
-      type: "session_started",
-      session_id: sessionId,
-      prompt: options.prompt,
-      cwd: options.cwd ?? (typeof process !== "undefined" ? process.cwd() : "/"),
-      created_at: Date.now(),
-      approval_required_tools: approvalRequiredTools,
+  void ready
+    .then(() => {
+      send({
+        type: "session_started",
+        session_id: sessionId,
+        prompt: options.prompt,
+        cwd: options.cwd ?? (typeof process !== "undefined" ? process.cwd() : "/"),
+        created_at: Date.now(),
+        approval_required_tools: approvalRequiredTools,
+      });
+    })
+    .catch((err: unknown) => {
+      console.error(err instanceof Error ? err.message : String(err));
     });
-  });
 
   function send(msg: AgentToServer) {
     if (ws.readyState === WebSocket.OPEN) {

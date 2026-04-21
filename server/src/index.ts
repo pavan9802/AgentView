@@ -5,11 +5,6 @@ import { handleAgentWsOpen, handleAgentWsMessage, handleAgentWsClose } from "./w
 import { pendingApprovals, sessions } from "./state";
 import { send } from "./ws/send";
 
-if (!process.env["ANTHROPIC_API_KEY"]) {
-  console.error("Error: ANTHROPIC_API_KEY is not set. Add it to .env and restart.");
-  process.exit(1);
-}
-
 const PORT = Number(process.env["PORT"] ?? 3000);
 
 const server = Bun.serve({

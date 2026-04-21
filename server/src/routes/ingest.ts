@@ -1,5 +1,6 @@
 import type { AgentToServer } from "@agentview/shared";
 import { processAgentEvent } from "../agent/ingest";
+import { pendingApprovals, pendingApprovalDetails } from "../state";
 
 export async function handlePostIngest(req: Request): Promise<Response> {
   let msg: AgentToServer;
@@ -25,7 +26,19 @@ export async function handlePostIngest(req: Request): Promise<Response> {
     if (!approvalPromise) {
       return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 });
     }
-    const approved = await approvalPromise;
+    // Timeout after 5 minutes — fail open so the agent isn't blocked forever if the
+    // dashboard disconnects or the user walks away.
+    const toolCallId = msg.tool_call_id;
+    let timedOut = false;
+    const timeout = new Promise<boolean>((resolve) => setTimeout(() => { timedOut = true; resolve(true); }, 5 * 60 * 1000));
+    const approved = await Promise.race([approvalPromise, timeout]);
+    // If the timeout won, the pendingApprovals callback was never called, so
+    // pendingApprovalDetails still has this entry. Clean it up now so the
+    // dashboard init message doesn't include a stale pending approval.
+    if (timedOut) {
+      pendingApprovals.delete(toolCallId);
+      pendingApprovalDetails.delete(toolCallId);
+    }
     return new Response(JSON.stringify({ approved }), {
       headers: { "Content-Type": "application/json" },
     });
