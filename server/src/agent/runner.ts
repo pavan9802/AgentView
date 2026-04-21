@@ -45,6 +45,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
     session.result_text = null;
   }
   if (!isResume) session.started_at = Date.now();
+  session.model = "claude-haiku-4-5";
 
   console.log(`\n[session:${sessionId}] ${isResume ? "resumed" : "started"} — prompt: "${turnPrompt}"`);
 

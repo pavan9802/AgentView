@@ -1,6 +1,7 @@
 import type { Turn, KillReason } from "@agentview/shared";
 import type { SessionState } from "../../state";
 import { send } from "../../ws/send";
+import { getPricing } from "../../lib/pricing";
 
 function killSession(session: SessionState, sessionId: string, reason: KillReason): void {
   session.status = "killed";
@@ -8,10 +9,6 @@ function killSession(session: SessionState, sessionId: string, reason: KillReaso
   session.abortController.abort();
   send({ type: "session_killed", session_id: sessionId, reason });
 }
-
-// Haiku 4.5 pricing (per token)
-const COST_PER_INPUT_TOKEN = 1e-6;   // $1 / 1M
-const COST_PER_OUTPUT_TOKEN = 5e-6;  // $5 / 1M
 
 export type LoopState = {
   turnStartedAt: number;
@@ -32,11 +29,19 @@ export function handleTurnUsage(
   const usage = (message as { usage: unknown }).usage;
   if (typeof usage !== "object" || usage === null) return;
 
-  const { input_tokens, output_tokens } = usage as { input_tokens?: number; output_tokens?: number };
+  const { input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens } =
+    usage as { input_tokens?: number; output_tokens?: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number };
   const inputTok = input_tokens ?? 0;
   const outputTok = output_tokens ?? 0;
+  const cacheWriteTok = cache_creation_input_tokens ?? 0;
+  const cacheReadTok = cache_read_input_tokens ?? 0;
   const latency_ms = Date.now() - loopState.turnStartedAt;
-  const cost_usd = inputTok * COST_PER_INPUT_TOKEN + outputTok * COST_PER_OUTPUT_TOKEN;
+  const pricing = getPricing(session.model);
+  const cost_usd =
+    inputTok * pricing.input +
+    outputTok * pricing.output +
+    cacheWriteTok * pricing.cacheWrite +
+    cacheReadTok * pricing.cacheRead;
   const context_fill_pct = Math.min((inputTok / 200_000) * 100, 100);
 
   loopState.turnNumber += 1;
