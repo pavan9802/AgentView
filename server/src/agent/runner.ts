@@ -30,6 +30,7 @@ function extractAssistantText(message: unknown): string | null {
 export async function runAgentSession(sessionId: string, prompt?: string): Promise<void> {
   const session = sessions.get(sessionId);
   if (!session) return;
+  if (session.source !== "agentview") return;
 
   const isResume = prompt !== undefined;
   const turnPrompt = isResume ? prompt : session.prompt;

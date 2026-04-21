@@ -1,8 +1,8 @@
 import type { HookCallbackMatcher, SessionStartHookInput } from "@anthropic-ai/claude-agent-sdk";
-import type { SessionState } from "../../state";
+import type { AgentViewSessionState } from "../../state";
 
 export function makeSessionStartHook(
-  session: SessionState,
+  session: AgentViewSessionState,
   sessionId: string,
   isResume: boolean,
 ): HookCallbackMatcher {

@@ -1,5 +1,5 @@
 import type { StartSessionRequest, StartSessionResponse, AddTurnRequest, AddTurnResponse } from "@agentview/shared";
-import { sessions, sessionToPublic } from "../state";
+import { sessions, sessionToPublic, type AgentViewSessionState } from "../state";
 import { runAgentSession } from "../agent/runner";
 import { send } from "../ws/send";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
@@ -28,6 +28,7 @@ export async function handlePostSession(req: Request): Promise<Response> {
 
   sessions.set(id, {
     id,
+    source: "agentview",
     sdk_session_id: null, // populated when the SDK emits its system:init message
     abortController: new AbortController(),
     promptQueue: null, // set by runner once query() starts
@@ -46,7 +47,7 @@ export async function handlePostSession(req: Request): Promise<Response> {
     kill_reason: null,
     approvalRequiredTools: new Set(body.approval_required_tools ?? ["Bash", "Write"]),
     approvedToolUseIds: new Set(),
-  });
+  } satisfies AgentViewSessionState);
 
   send({ type: "session_started", session: sessionToPublic(sessions.get(id)!) });
 
@@ -65,6 +66,12 @@ export async function handlePostTurn(req: Request, sessionId: string): Promise<R
 
   if (!session) {
     return jsonError("Session not found", "not_found", 404);
+  }
+
+  // Live injection and resume are only supported for agentview sessions.
+  // CC sessions are driven by the hook script — turns arrive via /hook/user-prompt-submit.
+  if (session.source !== "agentview") {
+    return jsonError("Session cannot be controlled via this endpoint", "not_supported", 409);
   }
 
   let body: AddTurnRequest;
