@@ -49,6 +49,9 @@ export type Session = {
   kill_reason: KillReason | null;
   result_text: string | null;
   approval_required_tools: string[];
+  source: "agentview" | "claude_code";
+  resumed?: boolean;
+  model?: string;
 };
 
 export type Turn = {
