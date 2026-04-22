@@ -1,4 +1,5 @@
 import { handlePostSession, handlePostTurn } from "./routes/session";
+import { handleHookSessionStart } from "./routes/hook";
 import { handleWsOpen, handleWsMessage, handleWsClose } from "./ws/handler";
 import { pendingApprovals, sessions } from "./state";
 import { send } from "./ws/send";
@@ -26,6 +27,10 @@ const server = Bun.serve({
 
     if (req.method === "POST" && url.pathname === "/session") {
       return handlePostSession(req);
+    }
+
+    if (req.method === "POST" && url.pathname === "/hook/session-start") {
+      return handleHookSessionStart(req);
     }
 
     const turnMatch = url.pathname.match(/^\/session\/([^/]+)\/turn$/);

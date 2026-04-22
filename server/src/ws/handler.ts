@@ -51,6 +51,7 @@ export function handleWsMessage(_ws: BunServerWebSocket, data: string | Uint8Arr
       const resolve = pendingApprovals.get(msg.tool_call_id);
       if (!resolve) return;
       pendingApprovals.delete(msg.tool_call_id);
+      pendingApprovalDetails.delete(msg.tool_call_id);
       resolve(msg.approved);
       break;
     }
