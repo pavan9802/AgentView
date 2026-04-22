@@ -1,12 +1,41 @@
 import type { Turn, KillReason } from "@agentview/shared";
-import type { SessionState } from "../../state";
+import type { CcSessionState, SessionState } from "../../state";
+import { pendingApprovals, pendingApprovalDetails } from "../../state";
 import { send } from "../../ws/send";
 import { getPricing } from "../../lib/pricing";
 
-function killSession(session: SessionState, sessionId: string, reason: KillReason): void {
+/**
+ * Source-aware session kill. Exported so ws/handler.ts and hook handlers
+ * can call a single shared implementation.
+ *
+ * - agentview: aborts the SDK query loop via AbortController
+ * - claude_code: sets killRequested = true; the PreToolUse hook denies at
+ *   the next tool call boundary
+ *
+ * Both paths drain only the pending approvals that belong to this session,
+ * fixing B1 (global drain could cancel approvals for other sessions).
+ */
+export function killSession(session: SessionState, sessionId: string, reason: KillReason): void {
   session.status = "killed";
   session.kill_reason = reason;
-  session.abortController.abort();
+
+  if (session.source === "agentview") {
+    session.abortController.abort();
+  } else {
+    (session as CcSessionState).killRequested = true;
+  }
+
+  // Session-scoped approval drain — resolves only entries belonging to this
+  // session so concurrent sessions are not disrupted.
+  for (const [toolUseId, resolve] of pendingApprovals) {
+    const details = pendingApprovalDetails.get(toolUseId);
+    if (details?.session_id === sessionId) {
+      resolve(false);
+      pendingApprovals.delete(toolUseId);
+      pendingApprovalDetails.delete(toolUseId);
+    }
+  }
+
   send({ type: "session_killed", session_id: sessionId, reason });
 }
 
