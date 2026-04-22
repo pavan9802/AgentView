@@ -1,5 +1,14 @@
 import { handlePostSession, handlePostTurn } from "./routes/session";
-import { handleHookSessionStart } from "./routes/hook";
+import {
+  handleHookSessionStart,
+  handleHookUserPromptSubmit,
+  handleHookPreToolUse,
+  handleHookPostToolUse,
+  handleHookPostToolUseFail,
+  handleHookStop,
+  handleHookStopFailure,
+  handleHookSessionEnd,
+} from "./routes/hook";
 import { handleWsOpen, handleWsMessage, handleWsClose } from "./ws/handler";
 import { pendingApprovals, sessions } from "./state";
 import { send } from "./ws/send";
@@ -31,6 +40,27 @@ const server = Bun.serve({
 
     if (req.method === "POST" && url.pathname === "/hook/session-start") {
       return handleHookSessionStart(req);
+    }
+    if (req.method === "POST" && url.pathname === "/hook/user-prompt-submit") {
+      return handleHookUserPromptSubmit(req);
+    }
+    if (req.method === "POST" && url.pathname === "/hook/pre-tool-use") {
+      return handleHookPreToolUse(req);
+    }
+    if (req.method === "POST" && url.pathname === "/hook/post-tool-use") {
+      return handleHookPostToolUse(req);
+    }
+    if (req.method === "POST" && url.pathname === "/hook/post-tool-use-fail") {
+      return handleHookPostToolUseFail(req);
+    }
+    if (req.method === "POST" && url.pathname === "/hook/stop") {
+      return handleHookStop(req);
+    }
+    if (req.method === "POST" && url.pathname === "/hook/stop-failure") {
+      return handleHookStopFailure(req);
+    }
+    if (req.method === "POST" && url.pathname === "/hook/session-end") {
+      return handleHookSessionEnd(req);
     }
 
     const turnMatch = url.pathname.match(/^\/session\/([^/]+)\/turn$/);
