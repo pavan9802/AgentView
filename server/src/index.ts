@@ -89,7 +89,8 @@ function shutdown() {
       session.abortController.abort();
       session.status = "killed";
       session.kill_reason = "server_shutdown";
-      send({ type: "session_killed", session_id: session.id, reason: "server_shutdown" });
+      session.completed_at = Date.now();
+      send({ type: "session_killed", session_id: session.id, reason: "server_shutdown", completed_at: session.completed_at });
     }
   }
   // Unblock any canUseTool awaits so their loops can exit cleanly.

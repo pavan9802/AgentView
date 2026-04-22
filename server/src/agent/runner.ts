@@ -111,7 +111,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
       if (!session.kill_reason) {
         session.status = "killed";
         session.kill_reason = "user_requested";
-        send({ type: "session_killed", session_id: sessionId, reason: "user_requested" });
+        send({ type: "session_killed", session_id: sessionId, reason: "user_requested", completed_at: session.completed_at! });
       }
       console.log(`[session:${sessionId}] aborted — status: ${session.status}`);
     } else {
@@ -119,7 +119,7 @@ export async function runAgentSession(sessionId: string, prompt?: string): Promi
       session.status = "errored";
       session.error_type = "api_unavailable";
       session.error_message = message;
-      send({ type: "session_errored", session_id: sessionId, error_type: "api_unavailable", error_message: message });
+      send({ type: "session_errored", session_id: sessionId, error_type: "api_unavailable", error_message: message, completed_at: session.completed_at! });
       console.error(`[session:${sessionId}] error`, err);
     }
   } finally {

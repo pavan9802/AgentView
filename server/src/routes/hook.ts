@@ -370,7 +370,7 @@ export async function handleHookStopFailure(req: Request): Promise<Response> {
     session.error_type = error_type;
     session.error_message = error_message;
 
-    send({ type: "session_errored", session_id: avId, error_type, error_message });
+    send({ type: "session_errored", session_id: avId, error_type, error_message, completed_at: session.completed_at! });
   } catch {
     // always 200
   }

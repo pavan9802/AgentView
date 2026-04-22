@@ -71,7 +71,7 @@ function handleSessionKilled(msg: WsSessionKilledMessage): void {
   const { sessions, upsertSession, clearPendingApprovalsForSession } = useAgentView.getState();
   const existing = sessions[msg.session_id];
   if (existing) {
-    upsertSession({ ...existing, status: "killed", kill_reason: msg.reason, completed_at: Date.now() });
+    upsertSession({ ...existing, status: "killed", kill_reason: msg.reason, completed_at: msg.completed_at });
   }
   clearPendingApprovalsForSession(msg.session_id);
 }
@@ -82,7 +82,7 @@ function handleSessionErrored(msg: WsSessionErroredMessage): void {
   const { sessions, upsertSession, clearPendingApprovalsForSession } = useAgentView.getState();
   const existing = sessions[msg.session_id];
   if (existing) {
-    upsertSession({ ...existing, status: "errored", error_type: msg.error_type, error_message: msg.error_message, completed_at: Date.now() });
+    upsertSession({ ...existing, status: "errored", error_type: msg.error_type, error_message: msg.error_message, completed_at: msg.completed_at });
   }
   clearPendingApprovalsForSession(msg.session_id);
 }

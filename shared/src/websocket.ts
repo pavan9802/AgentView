@@ -64,12 +64,14 @@ export type WsSessionErroredMessage = {
   session_id: string;
   error_type: ErrorReason;
   error_message: string;
+  completed_at: number;
 };
 
 export type WsSessionKilledMessage = {
   type: "session_killed";
   session_id: string;
   reason: KillReason;
+  completed_at: number;
 };
 
 export type WsKeyStatusMessage = {

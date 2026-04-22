@@ -37,7 +37,7 @@ export function killSession(session: SessionState, sessionId: string, reason: Ki
     }
   }
 
-  send({ type: "session_killed", session_id: sessionId, reason });
+  send({ type: "session_killed", session_id: sessionId, reason, completed_at: session.completed_at! });
 }
 
 /**
