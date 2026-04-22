@@ -129,7 +129,7 @@ export function createCcSession(ccSessionId: string, opts: { model?: string; res
     error_type: null,
     error_message: null,
     kill_reason: null,
-    approvalRequiredTools: new Set(["Bash", "Write"]),
+    approvalRequiredTools: new Set(), // overwritten by handleHookSessionStart based on permission_mode
     approvedToolUseIds: new Set(),
     turnStartedAt: null,
     currentTurnId: null,

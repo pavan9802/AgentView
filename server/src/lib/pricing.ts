@@ -51,6 +51,23 @@ const FALLBACK = MODEL_PRICING["claude-sonnet-4-6"] as ModelPricing;
  *      (e.g. "claude-sonnet-4-6-20251015" → Sonnet rates)
  *   3. Sonnet 4.6 as the fallback default
  */
+export type TokenUsage = {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens: number;
+  cache_read_input_tokens: number;
+};
+
+export function computeTurnCost(usage: TokenUsage, model: string | undefined): number {
+  const pricing = getPricing(model);
+  return (
+    usage.input_tokens * pricing.input +
+    usage.output_tokens * pricing.output +
+    usage.cache_creation_input_tokens * pricing.cacheWrite +
+    usage.cache_read_input_tokens * pricing.cacheRead
+  );
+}
+
 export function getPricing(model: string | undefined): ModelPricing {
   if (!model) return FALLBACK;
 

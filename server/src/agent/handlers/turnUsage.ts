@@ -2,7 +2,7 @@ import type { Turn, KillReason } from "@agentview/shared";
 import type { CcSessionState, SessionState } from "../../state";
 import { pendingApprovals, pendingApprovalDetails } from "../../state";
 import { send } from "../../ws/send";
-import { getPricing } from "../../lib/pricing";
+import { computeTurnCost } from "../../lib/pricing";
 
 /**
  * Source-aware session kill. Exported so ws/handler.ts and hook handlers
@@ -18,6 +18,7 @@ import { getPricing } from "../../lib/pricing";
 export function killSession(session: SessionState, sessionId: string, reason: KillReason): void {
   session.status = "killed";
   session.kill_reason = reason;
+  session.completed_at = Date.now();
 
   if (session.source === "agentview") {
     session.abortController.abort();
@@ -37,6 +38,24 @@ export function killSession(session: SessionState, sessionId: string, reason: Ki
   }
 
   send({ type: "session_killed", session_id: sessionId, reason });
+}
+
+/**
+ * Checks budget and turn limits. Kills the session if either is exceeded.
+ * Returns true if the session was killed (caller should return early).
+ */
+export function checkSessionLimits(session: SessionState, sessionId: string, totalTurns: number): boolean {
+  const budgetUsd = parseFloat(process.env["BUDGET_USD"] ?? "0.5");
+  if (session.total_cost_usd > budgetUsd) {
+    killSession(session, sessionId, "budget_exceeded");
+    return true;
+  }
+  const maxTurns = parseInt(process.env["MAX_TURNS"] ?? "50", 10);
+  if (totalTurns > maxTurns) {
+    killSession(session, sessionId, "max_turns_exceeded");
+    return true;
+  }
+  return false;
 }
 
 export type LoopState = {
@@ -65,12 +84,10 @@ export function handleTurnUsage(
   const cacheWriteTok = cache_creation_input_tokens ?? 0;
   const cacheReadTok = cache_read_input_tokens ?? 0;
   const latency_ms = Date.now() - loopState.turnStartedAt;
-  const pricing = getPricing(session.model);
-  const cost_usd =
-    inputTok * pricing.input +
-    outputTok * pricing.output +
-    cacheWriteTok * pricing.cacheWrite +
-    cacheReadTok * pricing.cacheRead;
+  const cost_usd = computeTurnCost(
+    { input_tokens: inputTok, output_tokens: outputTok, cache_creation_input_tokens: cacheWriteTok, cache_read_input_tokens: cacheReadTok },
+    session.model,
+  );
   const context_fill_pct = Math.min((inputTok / 200_000) * 100, 100);
 
   loopState.turnNumber += 1;
@@ -100,17 +117,7 @@ export function handleTurnUsage(
     cumulative_tokens: session.total_tokens,
   });
 
-  const budgetUsd = parseFloat(process.env["BUDGET_USD"] ?? "0.5");
-  if (session.total_cost_usd > budgetUsd) {
-    killSession(session, sessionId, "budget_exceeded");
-    return;
-  }
-
-  const maxTurns = parseInt(process.env["MAX_TURNS"] ?? "50", 10);
-  if (loopState.turnNumber > maxTurns) {
-    killSession(session, sessionId, "max_turns_exceeded");
-    return;
-  }
+  if (checkSessionLimits(session, sessionId, loopState.turnNumber)) return;
 
   loopState.turnStartedAt = Date.now();
 }

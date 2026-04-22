@@ -4,11 +4,12 @@ import {
   ccSessionIdToAvId,
   createCcSession,
   sessionToPublic,
+  pendingApprovalDetails,
   type CcSessionState,
 } from "../state";
 import { send } from "../ws/send";
-import { getPricing } from "../lib/pricing";
-import { killSession } from "../agent/handlers/turnUsage";
+import { computeTurnCost } from "../lib/pricing";
+import { checkSessionLimits } from "../agent/handlers/turnUsage";
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -45,6 +46,40 @@ function ok(body: Record<string, unknown> = {}): Response {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ── Session-Start ─────────────────────────────────────────────────────────────
+
+/**
+ * Shared post-tool processing for both success and failure paths.
+ * Computes duration, resolves approval status, builds ToolCall, and broadcasts.
+ */
+function buildAndBroadcastToolCall(
+  session: CcSessionState,
+  avId: string,
+  params: { tool_use_id: string; tool_name: string; tool_input: unknown; error: string | null },
+): ToolCall {
+  const { tool_use_id, tool_name, tool_input, error } = params;
+
+  const duration_ms = Date.now() - (session.toolTimestamps.get(tool_use_id) ?? Date.now());
+  session.toolTimestamps.delete(tool_use_id);
+
+  const wasApprovalRequired = session.approvalRequiredTools.has(tool_name);
+  const approved = wasApprovalRequired ? session.approvedToolUseIds.has(tool_use_id) : null;
+  if (wasApprovalRequired) session.approvedToolUseIds.delete(tool_use_id);
+  pendingApprovalDetails.delete(tool_use_id);
+
+  const toolCall: ToolCall = {
+    id: tool_use_id,
+    session_id: avId,
+    turn_id: session.currentTurnId ?? "",
+    tool_name,
+    tool_input: JSON.stringify(tool_input),
+    duration_ms,
+    approved,
+    error,
+    created_at: Date.now(),
+  };
+  send({ type: "tool_call", session_id: avId, tool_call: toolCall });
+  return toolCall;
+}
 
 type SessionStartPayload = {
   session_id: string;
@@ -110,8 +145,9 @@ export async function handleHookUserPromptSubmit(req: Request): Promise<Response
     session.currentTurnId = crypto.randomUUID();
     session.turnStartedAt = Date.now();
 
-    // Broadcast updated session so the dashboard shows the prompt immediately
-    // (session_started was sent in handleHookSessionStart with prompt: "").
+    // Re-broadcast as session_started (no separate session_updated type).
+    // The dashboard's handleSessionStarted calls upsertSession (keyed by id),
+    // so this is an idempotent upsert that pushes the prompt immediately.
     send({ type: "session_started", session: sessionToPublic(session) });
   } catch {
     // always 200
@@ -153,6 +189,8 @@ export async function handleHookPreToolUse(req: Request): Promise<Response> {
         tool_name,
         tool_input: JSON.stringify(tool_input),
       });
+      // Track for WS reconnect replay — cleaned up in PostToolUse / PostToolUseFail.
+      pendingApprovalDetails.set(tool_use_id, { session_id: avId, tool_name, tool_input: JSON.stringify(tool_input) });
       // Pre-mark as approved: PostToolUse firing means CC (and the user in the
       // terminal) allowed the tool to run.
       session.approvedToolUseIds.add(tool_use_id);
@@ -182,27 +220,7 @@ export async function handleHookPostToolUse(req: Request): Promise<Response> {
     const { avId, session } = result;
     const { tool_use_id, tool_name, tool_input, tool_response } = body;
 
-    const duration_ms = Date.now() - (session.toolTimestamps.get(tool_use_id) ?? Date.now());
-    session.toolTimestamps.delete(tool_use_id);
-
-    const wasApprovalRequired = session.approvalRequiredTools.has(tool_name);
-    // approved: true if tool was in approvalRequiredTools (pre-marked in PreToolUse
-    // when CC allowed it to run), null if no approval was required.
-    const approved = wasApprovalRequired ? session.approvedToolUseIds.has(tool_use_id) : null;
-    if (wasApprovalRequired) session.approvedToolUseIds.delete(tool_use_id);
-
-    const toolCall: ToolCall = {
-      id: tool_use_id,
-      session_id: avId,
-      turn_id: session.currentTurnId ?? "",
-      tool_name,
-      tool_input: JSON.stringify(tool_input),
-      duration_ms,
-      approved,
-      error: null,
-      created_at: Date.now(),
-    };
-    send({ type: "tool_call", session_id: avId, tool_call: toolCall });
+    buildAndBroadcastToolCall(session, avId, { tool_use_id, tool_name, tool_input, error: null });
 
     // Extract plain text from CC content-block array (B7 fix).
     const output = extractTextFromContent(tool_response);
@@ -232,30 +250,8 @@ export async function handleHookPostToolUseFail(req: Request): Promise<Response>
     const { avId, session } = result;
     const { tool_use_id, tool_name, tool_input, error, is_interrupt } = body;
 
-    const duration_ms = Date.now() - (session.toolTimestamps.get(tool_use_id) ?? Date.now());
-    session.toolTimestamps.delete(tool_use_id);
-
-    const wasApprovalRequired = session.approvalRequiredTools.has(tool_name);
-    // If the tool was interrupted or errored after being pre-approved, approved: false
-    // surfaces the failure clearly in the feed. null if no approval was required.
-    const approved = wasApprovalRequired ? false : null;
-    if (wasApprovalRequired) session.approvedToolUseIds.delete(tool_use_id);
-
     const errorMessage = is_interrupt ? "Interrupted by user" : (error || "Tool execution failed");
-
-    const toolCall: ToolCall = {
-      id: tool_use_id,
-      session_id: avId,
-      turn_id: session.currentTurnId ?? "",
-      tool_name,
-      tool_input: JSON.stringify(tool_input),
-      duration_ms,
-      approved,
-      error: errorMessage,
-      created_at: Date.now(),
-    };
-    send({ type: "tool_call", session_id: avId, tool_call: toolCall });
-    // No tool_result broadcast — there is no output to report for a failed tool.
+    buildAndBroadcastToolCall(session, avId, { tool_use_id, tool_name, tool_input, error: errorMessage });
   } catch {
     // always 200
   }
@@ -299,12 +295,10 @@ export async function handleHookStop(req: Request): Promise<Response> {
       const cacheWriteTok = body.usage.cache_creation_input_tokens ?? 0;
       const cacheReadTok = body.usage.cache_read_input_tokens ?? 0;
 
-      const pricing = getPricing(session.model);
-      const cost_usd =
-        inputTok * pricing.input +
-        outputTok * pricing.output +
-        cacheWriteTok * pricing.cacheWrite +
-        cacheReadTok * pricing.cacheRead;
+      const cost_usd = computeTurnCost(
+        { input_tokens: inputTok, output_tokens: outputTok, cache_creation_input_tokens: cacheWriteTok, cache_read_input_tokens: cacheReadTok },
+        session.model,
+      );
       const context_fill_pct = Math.min((inputTok / 200_000) * 100, 100);
 
       session.total_tokens += inputTok + outputTok;
@@ -335,17 +329,7 @@ export async function handleHookStop(req: Request): Promise<Response> {
     session.currentTurnId = null;
     session.turnStartedAt = null;
 
-    // Budget and turn-limit guards — use existing totals even when usage was absent.
-    const budgetUsd = parseFloat(process.env["BUDGET_USD"] ?? "0.5");
-    if (session.total_cost_usd > budgetUsd) {
-      killSession(session, avId, "budget_exceeded");
-      return ok();
-    }
-    const maxTurns = parseInt(process.env["MAX_TURNS"] ?? "50", 10);
-    if (session.total_turns > maxTurns) {
-      killSession(session, avId, "max_turns_exceeded");
-      return ok();
-    }
+    if (checkSessionLimits(session, avId, session.total_turns)) return ok();
   } catch {
     // always 200
   }
@@ -382,6 +366,7 @@ export async function handleHookStopFailure(req: Request): Promise<Response> {
         : (body.error as { message?: string } | null)?.message ?? "Unknown error";
 
     session.status = "errored";
+    session.completed_at = Date.now();
     session.error_type = error_type;
     session.error_message = error_message;
 
