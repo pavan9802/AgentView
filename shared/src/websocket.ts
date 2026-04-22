@@ -57,6 +57,7 @@ export type WsSessionCompleteMessage = {
   total_tokens: number;
   total_turns: number;
   result_text: string;
+  completed_at: number;
 };
 
 export type WsSessionErroredMessage = {

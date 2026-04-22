@@ -24,6 +24,7 @@ export function makeStopHook(
             total_tokens: session.total_tokens,
             total_turns: session.total_turns,
             result_text: loopState.resultText,
+            completed_at: session.completed_at!,
           });
           console.log(`[session:${sessionId}] complete — cost: $${session.total_cost_usd.toFixed(4)}, turns: ${session.total_turns}`);
         }

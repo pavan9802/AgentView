@@ -43,7 +43,7 @@ function handleSessionComplete(msg: WsSessionCompleteMessage): void {
     upsertSession({
       ...existing,
       status: "complete",
-      completed_at: Date.now(),
+      completed_at: msg.completed_at,
       total_cost_usd: msg.total_cost_usd,
       total_tokens: msg.total_tokens,
       total_turns: msg.total_turns,

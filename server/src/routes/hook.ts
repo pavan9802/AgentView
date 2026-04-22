@@ -405,6 +405,7 @@ export async function handleHookSessionEnd(req: Request): Promise<Response> {
       total_tokens: session.total_tokens,
       total_turns: session.total_turns,
       result_text: "",
+      completed_at: session.completed_at!,
     });
   } catch {
     // always 200
