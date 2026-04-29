@@ -1,7 +1,7 @@
-import { memo, useState } from "react";
+import { memo, useState, useMemo } from "react";
 import { useSessions } from "../../hooks/useSessions";
 import { useAgentView } from "../../store";
-import { selectSelectedSession } from "../../store/selectors";
+import { selectSelectedSession, selectIsClaudeCodeSession } from "../../store/selectors";
 
 function PromptBar() {
   const { startSession, addTurn, isStarting } = useSessions();
@@ -9,6 +9,8 @@ function PromptBar() {
   const injectionError = useAgentView((s) => s.injectionError);
   const setInjectionError = useAgentView((s) => s.setInjectionError);
   const [prompt, setPrompt] = useState("");
+  const isCcSelector = useMemo(() => selectIsClaudeCodeSession(activeSession?.id ?? ""), [activeSession?.id]);
+  const isCc = useAgentView(isCcSelector);
 
   const handleSubmit = () => {
     if (!prompt.trim()) return;
@@ -23,6 +25,16 @@ function PromptBar() {
   const placeholder = activeSession
     ? "Inject instructions into this session…"
     : "New session prompt…";
+
+  if (isCc) {
+    return (
+      <div className="pbar-wrap">
+        <div className="pbar pbar-cc">
+          <span className="pbar-cc-msg">Running in Claude Code — prompt from your terminal</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pbar-wrap">

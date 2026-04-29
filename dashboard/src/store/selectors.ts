@@ -15,6 +15,9 @@ const EMPTY_APPROVALS: PendingApproval[] = [];
 export const selectSelectedSession = (state: AgentViewState): Session | undefined =>
   state.activeId != null ? state.sessions[state.activeId] : undefined;
 
+export const selectIsClaudeCodeSession = (id: string) => (state: AgentViewState): boolean =>
+  state.sessions[id]?.source === "claude_code";
+
 export const selectTotalCost = (state: AgentViewState): number =>
   Object.values(state.sessions).reduce((sum, s) => sum + s.total_cost_usd, 0);
 
@@ -79,6 +82,8 @@ export const selectFeedItems = (() => {
       type: "turn" as const,
       turn: t.turn_number,
       ts: t.created_at,
+      input_tokens: t.input_tokens,
+      cost_usd: t.cost_usd,
     }));
     const toolItems: FeedItem[] = toolCalls.map((tc) => ({
       id: tc.id,

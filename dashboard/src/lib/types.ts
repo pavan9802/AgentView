@@ -7,6 +7,8 @@ export type TurnFeedItem = {
   type: "turn";
   turn: number;
   ts: number;
+  input_tokens: number;
+  cost_usd: number;
 };
 
 export type ToolFeedItem = {

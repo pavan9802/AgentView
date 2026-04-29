@@ -23,7 +23,17 @@ function FeedList() {
     <div className="feed" ref={feedRef}>
       {feedItems.map((item) => {
         if (item.type === "turn") {
-          return <div className="tmark" key={item.id}>TURN {item.turn}</div>;
+          const showMetrics = item.input_tokens !== 0 || item.cost_usd !== 0;
+          return (
+            <div className="tmark" key={item.id}>
+              TURN {item.turn}
+              {showMetrics && (
+                <span className="tmark-meta">
+                  {item.input_tokens.toLocaleString()} tok · ${item.cost_usd.toFixed(4)}
+                </span>
+              )}
+            </div>
+          );
         }
         return (
           <div className="fi" key={item.id}>

@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { fmtElapsed } from "../../lib/utils";
 import { useAgentView } from "../../store";
-import { selectSelectedSession, selectCtxPct } from "../../store/selectors";
+import { selectSelectedSession, selectCtxPct, selectIsClaudeCodeSession } from "../../store/selectors";
 
 function SessionHeader() {
   const activeId = useAgentView((s) => s.activeId);
   const selectedSession = useAgentView(selectSelectedSession);
   const ctxPctSelector = useMemo(() => selectCtxPct(activeId ?? ""), [activeId]);
+  const isCcSelector = useMemo(() => selectIsClaudeCodeSession(activeId ?? ""), [activeId]);
   const ctxPct = useAgentView(ctxPctSelector);
+  const isCc = useAgentView(isCcSelector);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -29,12 +31,26 @@ function SessionHeader() {
         ? "var(--blue)"
         : "var(--amber)";
 
+  const promptDisplay = selectedSession.prompt !== ""
+    ? selectedSession.prompt
+    : "Session in progress…";
+
   return (
     <div className="thdr">
       <div className={`sdot ${selectedSession.status}`} />
-      <div className="tname">{selectedSession.prompt}</div>
+      <div className="tname">
+        {promptDisplay}
+        {isCc && <span className="badge badge-cc">Claude Code</span>}
+        {selectedSession.resumed && <span className="badge badge-resumed">Resumed</span>}
+      </div>
       <div className="tmeta">
         <span style={{ color: statusColor }}>{selectedSession.status}</span>
+        {isCc && selectedSession.model && (
+          <>
+            <span style={{ color: "var(--text-muted)" }}>model</span>
+            <b>{selectedSession.model}</b>
+          </>
+        )}
         <span style={{ color: "var(--text-muted)" }}>turn</span>
         <b>{selectedSession.total_turns}</b>
         <span style={{ color: "var(--text-muted)" }}>elapsed</span>
