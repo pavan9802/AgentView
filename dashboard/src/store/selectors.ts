@@ -2,6 +2,7 @@ import type { Session, Turn, ToolCall } from "../lib/types";
 import type { PendingApproval } from "@agentview/shared";
 import type { FeedItem, TokenPoint, LatencyPoint } from "../lib/types";
 import { BUDGET } from "../lib/constants";
+import { formatToolInput } from "../lib/formatToolInput";
 import type { AgentViewState } from "./index";
 
 // Stable empty fallbacks so `?? []` never allocates a new array on each call
@@ -83,7 +84,7 @@ export const selectFeedItems = (() => {
       id: tc.id,
       type: "tool" as const,
       tool: tc.tool_name,
-      arg: tc.tool_input,
+      arg: formatToolInput(tc.tool_name, tc.tool_input),
       ts: tc.created_at,
       duration: tc.duration_ms,
     }));

@@ -33,7 +33,10 @@ async function readUsageFromTranscript(transcriptPath: string) {
   return null;
 }
 
+const log = (...args: unknown[]) => console.error("[agentview]", ...args);
+
 async function fireAndForget(path: string, body: Record<string, unknown>): Promise<void> {
+  log(`→ POST ${path}`, JSON.stringify(body));
   try {
     await fetch(`${SERVER}${path}`, {
       method: "POST",
@@ -41,10 +44,14 @@ async function fireAndForget(path: string, body: Record<string, unknown>): Promi
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(5_000),
     });
-  } catch {}
+    log(`✓ ${path}`);
+  } catch (err) {
+    log(`✗ ${path}`, err);
+  }
 }
 
 async function sendPreToolUse(body: Record<string, unknown>): Promise<void> {
+  log("→ POST /hook/pre-tool-use (blocking)", JSON.stringify(body));
   try {
     const res = await fetch(`${SERVER}/hook/pre-tool-use`, {
       method: "POST",
@@ -53,10 +60,13 @@ async function sendPreToolUse(body: Record<string, unknown>): Promise<void> {
       signal: AbortSignal.timeout(58_000),
     });
     const json = (await res.json()) as { decision?: string };
+    log(`✓ /hook/pre-tool-use decision=${json.decision}`);
     if (json.decision === "deny") {
       process.stdout.write(JSON.stringify({ decision: "deny" }));
     }
-  } catch {}
+  } catch (err) {
+    log("✗ /hook/pre-tool-use", err);
+  }
 }
 
 try {
@@ -64,16 +74,22 @@ try {
   const event = JSON.parse(raw) as Record<string, unknown>;
   const { hook_event_name, ...body } = event;
 
+  log(`event=${String(hook_event_name)}`);
+
   if (hook_event_name === "PreToolUse") {
     await sendPreToolUse(body);
   } else if (hook_event_name === "Stop" && typeof body["transcript_path"] === "string") {
     const usage = await readUsageFromTranscript(body["transcript_path"]);
+    log("transcript usage:", usage ? JSON.stringify(usage) : "not found");
     if (usage) body["usage"] = usage;
     await fireAndForget(ROUTE[hook_event_name as string] ?? "", body);
   } else {
     const path = ROUTE[hook_event_name as string];
     if (path) await fireAndForget(path, body);
+    else log(`unknown event, skipping: ${String(hook_event_name)}`);
   }
-} catch {}
+} catch (err) {
+  console.error("[agentview] fatal:", err);
+}
 
 process.exit(0);
