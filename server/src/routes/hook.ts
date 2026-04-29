@@ -278,8 +278,9 @@ export async function handleHookStop(req: Request): Promise<Response> {
     const { avId, session } = result;
 
     // B11 fix: if the session was killed at a tool boundary, CC may still fire
-    // Stop as it wraps up — skip turn creation and cost tracking, just clean up.
-    if (session.status === "killed") {
+    // Stop as it wraps up. Same for errored (StopFailure + Stop race). Skip
+    // turn creation and cost tracking in either terminal state — just clean up.
+    if (session.status === "killed" || session.status === "errored") {
       session.currentTurnId = null;
       session.turnStartedAt = null;
       return ok();
