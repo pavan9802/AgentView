@@ -10,6 +10,7 @@ declare const process: {
   exit(code?: number): never;
   cwd(): string;
   on(event: string, listener: (...args: unknown[]) => void): void;
+  stdout: { write(data: string): void };
 };
 
 interface BunServerWebSocket {
@@ -28,4 +29,6 @@ declare const Bun: {
       close?(ws: BunServerWebSocket, code?: number, reason?: string): void;
     };
   }): { port: number; upgrade(req: Request): boolean };
+  file(path: string): { text(): Promise<string> };
+  stdin: { text(): Promise<string> };
 };
