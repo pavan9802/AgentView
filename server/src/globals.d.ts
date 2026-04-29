@@ -31,4 +31,10 @@ declare const Bun: {
   }): { port: number; upgrade(req: Request): boolean };
   file(path: string): { text(): Promise<string> };
   stdin: { text(): Promise<string> };
+  resolveSync(specifier: string, from: string): string;
 };
+
+interface ImportMeta {
+  dir: string;
+  url: string;
+}

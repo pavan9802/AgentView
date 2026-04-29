@@ -83,6 +83,27 @@ const server = Bun.serve({
 
 console.log(`AgentView server — http://localhost:${server.port}`);
 
+const hookPath = Bun.resolveSync("../../hooks/claude-code-hook.ts", import.meta.dir);
+console.log(`
+── AgentView Claude Code Setup ──
+Add this to your .claude/settings.json:
+
+{
+  "hooks": {
+    "SessionStart":       [{ "hooks": [{ "type": "command", "command": "bun ${hookPath}", "async": true }] }],
+    "UserPromptSubmit":   [{ "hooks": [{ "type": "command", "command": "bun ${hookPath}", "async": true }] }],
+    "PreToolUse":         [{ "hooks": [{ "type": "command", "command": "bun ${hookPath}" }] }],
+    "PostToolUse":        [{ "hooks": [{ "type": "command", "command": "bun ${hookPath}", "async": true }] }],
+    "PostToolUseFail":    [{ "hooks": [{ "type": "command", "command": "bun ${hookPath}", "async": true }] }],
+    "Stop":               [{ "hooks": [{ "type": "command", "command": "bun ${hookPath}", "async": true }] }],
+    "SessionEnd":         [{ "hooks": [{ "type": "command", "command": "bun ${hookPath}", "async": true }] }]
+  }
+}
+
+PreToolUse is synchronous (blocking) — all others are async.
+────────────────────────────────
+`);
+
 function shutdown() {
   for (const session of sessions.values()) {
     if (session.status === "running") {
